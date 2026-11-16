@@ -6,7 +6,7 @@
   const sub=(a,b)=>a.map((x,i)=>x-b[i]), cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]], unit=a=>{const f=1/(Math.hypot(...a)||1);return a.map(n=>n*f);};
   const col=s=>[0,2,4].map(i=>parseInt(s.slice(i,i+2),16)/255), tint=(a,k)=>a.map(v=>clamp(v*k)), blend=(a,b,t)=>a.map((v,i)=>lerp(v,b[i],clamp(t)));
   const profiles={
-    auditor:{coat:'263b64',lapel:'2c436e',shirt:'aac7e8',pants:'373b46',skin:'e7ad80',lip:'ba796b',hair:'30221d',strand:'624331',iris:'6c4a30',leather:'22262d'},
+    auditor:{coat:'263b64',lapel:'2c436e',shirt:'aac7e8',pants:'373b46',skin:'e6ad87',lip:'bc7a6e',hair:'3e2a26',strand:'56392d',iris:'6c4a30',leather:'22262d'},
     manager:{coat:'343d58',lapel:'414c69',shirt:'90b4da',pants:'383f4b',skin:'d7a182',lip:'ad756b',hair:'4b403b',strand:'887a71',iris:'60513c',leather:'3a302e'},
     worker:{coat:'e67d36',lapel:'f29242',shirt:'375077',pants:'2f435e',skin:'b37b58',lip:'945e51',hair:'332722',strand:'46312b',iris:'503928',leather:'55483c'}
   };
@@ -76,6 +76,52 @@
     // Rows: [height, half width, half depth, center x, center z].
     loft(rows,c,mat,n=22,m=Math.max(10,rows.length*2),folds) {
       this.surface((u,v)=>{const a=u*TAU,y=lerp(rows[0][0],rows.at(-1)[0],v),[rx,rz,x,z]=sample(rows,y),r=folds?folds(a,y):0;return[x+sin(a)*(rx+r),y,z-cos(a)*(rz+r)];},n,m,c,mat);
+    }
+    implicit(bounds,step,field,color,material,side=1){
+      const size=bounds.map(([a,b])=>Math.ceil((b-a)/step)+1),[nx,ny,nz]=size;
+      const positions=[],values=new Float32Array(nx*ny*nz);
+      const index=(x,y,z)=>x+nx*(y+ny*z);
+      for(let z=0;z<nz;z++)for(let y=0;y<ny;y++)for(let x=0;x<nx;x++){
+        const p=[x,y,z].map((n,i)=>lerp(bounds[i][0],bounds[i][1],n/(size[i]-1)));
+        const id=index(x,y,z);positions[id]=p;values[id]=field(p)+.000017;
+      }
+      const corners=[[0,0,0],[1,0,0],[1,1,0],[0,1,0],[0,0,1],[1,0,1],[1,1,1],[0,1,1]];
+      const tetrahedra=[[0,1,2,6],[0,2,3,6],[0,3,7,6],[0,7,4,6],[0,4,5,6],[0,5,1,6]];
+      const cache=new Map(),epsilon=.00025;
+      const edge=(a,b)=>{
+        const key=Math.min(a,b)*values.length+Math.max(a,b);
+        if(cache.has(key))return cache.get(key);
+        const t=values[a]/(values[a]-values[b]),p=positions[a].map((v,i)=>lerp(v,positions[b][i],t));
+        const n=unit([0,1,2].map(i=>{
+          const hi=[...p],lo=[...p];hi[i]+=epsilon;lo[i]-=epsilon;
+          return field(hi)-field(lo);
+        }));
+        p[0]*=side;n[0]*=side;
+        const id=this.out.length/16,c=typeof color==='function'?color(p):color;
+        this.out.push(...p,...n,...c,material,0,...weights(this.name,p,0,0),0,0);
+        cache.set(key,id);return id;
+      };
+      const triangle=(a,b,c)=>{
+        const p=id=>this.out.slice(id*16,id*16+3),n=id=>this.out.slice(id*16+3,id*16+6);
+        const normal=cross(sub(p(b),p(a)),sub(p(c),p(a))),average=n(a).map((v,i)=>v+n(b)[i]+n(c)[i]);
+        if(normal.reduce((sum,v,i)=>sum+v*average[i],0)<0)[b,c]=[c,b];
+        this.indices.push(a,b,c);
+      };
+      for(let z=0;z<nz-1;z++)for(let y=0;y<ny-1;y++)for(let x=0;x<nx-1;x++){
+        const ids=corners.map(([dx,dy,dz])=>index(x+dx,y+dy,z+dz));
+        for(const tetrahedron of tetrahedra){
+          const inside=[],outside=[];
+          for(const corner of tetrahedron)(values[ids[corner]]<0?inside:outside).push(ids[corner]);
+          if(inside.length===0||inside.length===4)continue;
+          if(inside.length===1||inside.length===3){
+            const one=inside.length===1?inside:outside,many=inside.length===1?outside:inside;
+            triangle(...many.map(id=>edge(one[0],id)));
+          }else{
+            const [a,b]=inside,[c,d]=outside,ac=edge(a,c),ad=edge(a,d),bc=edge(b,c),bd=edge(b,d);
+            triangle(ac,ad,bd);triangle(ac,bd,bc);
+          }
+        }
+      }
     }
     finish(role){
       let count=0,indexCount=0;
@@ -214,31 +260,20 @@
     function hairline(a){return sample(cut,Math.atan2(sin(a),cos(a)))[0]+(manager?.009:0);}
     function cap(a,v,raised=0){
       const f=cos(a),low=hairline(a),ang=v*Math.PI*.5,ys=lerp(low,3.084,sin(ang)),p=scalp(a,ys);
-      const sweep=Math.max(0,f)*(.55-.32*sin(a)),bulge=sin(Math.PI*v),weld=smooth(.92,1,v);
-      const th=(.011*(1-v)+.019*bulge+(manager?.014:.032)*bulge*sweep+raised)*(1-weld);
-      const height=lerp((.024+(manager?.018:.076)*sweep)*sin(ang),manager?.034:.065,smooth(.76,1,v));
-      return[p[0]*(1-weld)+sin(a)*th-.021*v,p[1]+height+raised*(1-weld)*v,.025+(p[2]-.025)*(1-weld)-f*th-.015*bulge*sweep*(1-weld)];
+      const sweep=Math.max(0,f)*(.55-.32*sin(a)),bulge=sin(Math.PI*v),th=.011*(1-v)+.019*bulge+(manager?.014:.035)*bulge*sweep;
+      return[p[0]+sin(a)*(th+raised)-.021*v,p[1]+(.017+(manager?.003:.039)*sweep)*sin(ang)+raised*(.15+.85*v),p[2]-f*(th+raised)-.012*bulge*sweep];
     }
     if(worker){
       m.surface((u,v)=>{const a=u*TAU,y=lerp(Math.min(2.927,hairline(a)),2.937,v),p=scalp(a,y);return[p[0]+.006*sin(a),y,p[2]-.006*cos(a)];},44,8,P.hair,hair);
     }else{
-      m.surface((u,v)=>cap(u*TAU,v),80,21,(u,v)=>blend(P.hair,P.strand,(manager?.58:.18)*(1-cos(u*TAU))*.5+.09*v),hair);
+      m.surface((u,v)=>cap(u*TAU,v),54,21,(u,v)=>blend(P.hair,P.strand,(manager?.58:.18)*(1-cos(u*TAU))*.5+.09*v),hair);
     }
     // The side part and broad swept locks follow the scalp in 3D; tapered relief
     // reads in the crown and the nape, without a flat painted-on hair silhouette.
     if(!worker){
-      for(let i=0;i<30;i++){const start=-Math.PI+TAU*i/30,front=Math.max(0,cos(start)),sweep=start<.65?1:-1,amp=(.15+front*.47)*(manager?.85:1);
-        m.surface((u,v)=>{const taper=sin(Math.PI*v)**.65,t=.008+.95*v,a=start+sweep*amp*sin(Math.PI*v*.84)+.027*sin(v*TAU+start)+(u-.5)*(.10+.15*front)*taper;
-          return cap(a,t,.0007+sin(Math.PI*u)*taper*(.003+.006*front));},6,19,(u,v)=>blend(P.hair,P.strand,(.05+.30*sin(Math.PI*u)*sin(Math.PI*v))*(manager?1:.78)),hair);
-      }
-      // Fine relief follows the combed locks; these are tapered ribbons rather
-      // than painted stripes, so they keep their placement when the head turns.
-      for(let i=0;i<68;i++){
-        const start=-Math.PI+TAU*(i+.31)/68,front=Math.max(0,cos(start)),sweep=start<.65?1:-1,amp=(.15+front*.47)*(manager?.85:1);
-        m.surface((u,v)=>{
-          const t=.015+.94*v,a=start+sweep*amp*sin(Math.PI*v*.84)+.027*sin(v*TAU+start)+(u-.5)*.006*sin(Math.PI*v);
-          return cap(a,t,.001+.0015*sin(Math.PI*u)*sin(Math.PI*v));
-        },2,17,(u,v)=>blend(P.hair,P.strand,(.12+.25*sin(Math.PI*v))*(manager?.9:.7)),hair);
+      for(let i=0;i<22;i++){const start=-Math.PI+TAU*i/22,front=Math.max(0,cos(start)),sweep=start<.65?1:-1,amp=(.15+front*.47)*(manager?.85:1);
+        m.surface((u,v)=>{const taper=sin(Math.PI*v)**.65,t=.008+.95*v,a=start+sweep*amp*sin(Math.PI*v*.84)+.027*sin(v*TAU+start)+(u-.5)*(.15+.24*front)*taper;
+          return cap(a,t,.0007+sin(Math.PI*u)*taper*(.005+.014*front));},6,17,(u,v)=>blend(P.hair,P.strand,(.05+.48*sin(Math.PI*u)*sin(Math.PI*v))*(manager?1:.78)),hair);
       }
     } else {
       const gold=col('f4ab30'),goldHi=col('ffd25b');
@@ -379,6 +414,103 @@
       for(const y of [2.21,2.193])crease(t=>[.18+t*.058,y],.0025,col('517184'),enamel,.029);
     }
   }
+  const handForms=new Map();
+  const fingerShapes=[
+    {points:[[.456,1.497,-.101],[.458,1.454,-.105],[.451,1.411,-.110],[.444,1.382,-.107]],radii:[.0175,.0145,.013,.011]},
+    {points:[[.456,1.500,-.072],[.458,1.455,-.074],[.450,1.402,-.078],[.443,1.365,-.075]],radii:[.018,.015,.0135,.0115]},
+    {points:[[.456,1.496,-.043],[.458,1.452,-.042],[.451,1.410,-.044],[.444,1.377,-.041]],radii:[.017,.014,.0125,.0105]},
+    {points:[[.456,1.482,-.014],[.458,1.447,-.010],[.452,1.418,-.009],[.446,1.398,-.006]],radii:[.0155,.013,.0115,.0095]}
+  ];
+  function handForm(carry){
+    if(handForms.has(carry))return handForms.get(carry);
+    const ellipsoid=(p,c,r)=>{
+      const x=p[0]-c[0],y=p[1]-c[1],z=p[2]-c[2];
+      const a=Math.hypot(x/r[0],y/r[1],z/r[2]),b=Math.hypot(x/(r[0]*r[0]),y/(r[1]*r[1]),z/(r[2]*r[2]));
+      return b<.00001?-Math.min(...r):a*(a-1)/b;
+    };
+    const union=(a,b,k)=>{
+      const h=clamp(.5+.5*(b-a)/k);return lerp(b,a,h)-k*h*(1-h);
+    };
+    const segments=[];
+    const chain=(points,radii)=>{
+      for(let i=0;i<points.length-1;i++){
+        const a=points[i],d=sub(points[i+1],a);
+        segments.push({a,d,l2:d.reduce((sum,v)=>sum+v*v,0),r:radii[i],dr:radii[i+1]-radii[i]});
+      }
+    };
+    for(const finger of fingerShapes)chain(finger.points,finger.radii);
+    if(carry){
+      chain([[.435,1.55,-.096],[.437,1.578,-.114],[.405,1.615,-.120],[.380,1.598,-.119],[.376,1.568,-.112]],
+        [.021,.018,.014,.012,.010]);
+    }else{
+      chain([[.435,1.548,-.099],[.421,1.522,-.116],[.418,1.490,-.131],[.428,1.466,-.127]],
+        [.024,.020,.016,.013]);
+    }
+    const field=p=>{
+      let distance=ellipsoid(p,[.455,1.515,-.056],[.039,.073,.064]);
+      distance=union(distance,ellipsoid(p,[.453,1.595,-.050],[.044,.041,.052]),.012);
+      distance=union(distance,ellipsoid(p,[carry?.442:.436,1.529,-.096],[.026,.041,.034]),.010);
+      for(const segment of segments){
+        const x=p[0]-segment.a[0],y=p[1]-segment.a[1],z=p[2]-segment.a[2];
+        const t=clamp((x*segment.d[0]+y*segment.d[1]+z*segment.d[2])/segment.l2);
+        const d=Math.hypot(x-t*segment.d[0],y-t*segment.d[1],z-t*segment.d[2])-segment.r-t*segment.dr;
+        distance=union(distance,d,.006);
+      }
+      return distance;
+    };
+    const pattern=new Pattern();pattern.bone('handR');
+    pattern.implicit([[.354,.520],[1.333,1.655],[-.158,.028]],.0086,field,[1,1,1],skin);
+    const normalAt=p=>unit([0,1,2].map(axis=>{
+      const hi=[...p],lo=[...p];hi[axis]+=.00025;lo[axis]-=.00025;return field(hi)-field(lo);
+    }));
+    const nail=(axis,sign,center,ry,width)=>{
+      const columns=18,rows=6,base=pattern.out.length/16,epsilon=.0001;
+      for(let j=0;j<=rows;j++)for(let i=0;i<=columns;i++){
+        const angle=TAU*i/columns,r=epsilon+(1-epsilon)*j/rows,y=center.y+ry*cos(angle)*r,p=center.at(y);
+        p[1]=y;p[axis===0?2:0]+=width*sin(angle)*r;
+        let inner=p[axis],outer=axis===0?(sign>0?.525:.350):-.170;
+        for(let k=0;k<15;k++){
+          p[axis]=(inner+outer)*.5;
+          if(field(p)>0)outer=p[axis];else inner=p[axis];
+        }
+        p[axis]=(inner+outer)*.5;const n=normalAt(p);
+        const raised=p.map((v,k)=>v+n[k]*.00045);
+        pattern.out.push(...raised,...n,1,1,1,enamel,0,...weights('handR',raised,0,0),i/columns,j/rows);
+      }
+      const emit=(a,b,c)=>{
+        const p=id=>pattern.out.slice(id*16,id*16+3),n=pattern.out.slice(a*16+3,a*16+6);
+        const face=cross(sub(p(b),p(a)),sub(p(c),p(a)));
+        if(face.reduce((sum,v,i)=>sum+v*n[i],0)<0)[b,c]=[c,b];
+        pattern.indices.push(a,b,c);
+      };
+      for(let j=0;j<rows;j++)for(let i=0;i<columns;i++){
+        const a=base+i+(columns+1)*j,b=a+1,c=a+columns+1,d=c+1;
+        emit(a,d,b);emit(a,c,d);
+      }
+    };
+    const lineAtY=(a,b,y)=>a.map((v,i)=>lerp(v,b[i],clamp((a[1]-y)/(a[1]-b[1]))));
+    for(const finger of fingerShapes){
+      const tip=finger.points.at(-1),joint=finger.points.at(-2);
+      nail(0,1,{y:tip[1]+.014,at:y=>lineAtY(joint,tip,y)},.010,.006);
+    }
+    if(carry)nail(0,-1,{y:1.580,at:y=>lineAtY([.380,1.598,-.119],[.376,1.568,-.112],y)},.008,.0058);
+    else nail(2,-1,{y:1.479,at:y=>lineAtY([.418,1.490,-.131],[.428,1.466,-.127],y)},.009,.0065);
+    const form=pattern.chunks.get('handR');handForms.set(carry,form);return form;
+  }
+  function makeHand(m,P,side,carry){
+    m.bone('hand'+(side<0?'L':'R'));
+    const form=handForm(carry),offset=m.out.length/16;
+    // One watertight skin surface includes wrist, palm, finger webs and thumb.
+    for(let i=0;i<form.vertices.length;i+=16){
+      const p=[form.vertices[i]*side,form.vertices[i+1],form.vertices[i+2]],n=[form.vertices[i+3]*side,form.vertices[i+4],form.vertices[i+5]];
+      const material=form.vertices[i+9],color=material===skin?P.skin:blend(P.skin,col('f2d6bb'),.42);
+      m.out.push(...p,...n,...color,material,0,...weights(m.name,p,0,0),0,0);
+    }
+    for(let i=0;i<form.indices.length;i+=3){
+      const [a,b,c]=form.indices.slice(i,i+3);
+      m.indices.push(offset+a,offset+(side>0?b:c),offset+(side>0?c:b));
+    }
+  }
   function limbs(m,P,role) {
     const worker=role==='worker',silver=col('a4aeb9'),skinC=P.skin;
     for(const s of [-1,1]){
@@ -407,21 +539,7 @@
         loft([[1.582,.067,.071,.456,-.055],[1.594,.071,.074,.456,-.055],[1.626,.073,.077,.454,-.051]],P.shirt,fabric,28,8);
         for(let k=0;k<4;k++)m.ell(s*(.530-k*.002),1.646+k*.020,-.042,.004,.006,.006,tint(P.coat,.73),metal,10,6);
       }
-      m.bone('hand'+side);
-      loft([[1.433,.031,.048,.457,-.053],[1.447,.044,.060,.462,-.057],[1.51,.051,.070,.458,-.062],[1.575,.045,.060,.456,-.058],[1.626,.047,.058,.453,-.049]],skinC,skin,28,22);
-      for(let k=0;k<4;k++){
-        const z=.005-k*.030,y=1.396-.023*sin(Math.PI*(k+.3)/4),xx=.459+.005*sin(k);
-        loft([[y,.005,.006,xx-.012,z-.047],[y+.012,.015,.013,xx-.006,z-.053],[y+.036,.018,.014,xx+.002,z-.056],[1.464,.020,.015,xx,z-.058]],skinC,skin,16,16);
-        m.ell(s*(xx+.010),y+.024,z-.052,.0025,.011,.009,blend(P.skin,col('f2d6bb'),.48),enamel,12,8);
-        m.tube(t=>[s*(xx+.014),y+.050+.0015*sin(t*Math.PI),z-.065+.018*t],.0006,blend(P.lip,P.skin,.62),skin,7,4);
-      }
-      if(role==='auditor'&&s>0){
-        // Wrap the thumb over the top edge instead of through the folio's panel.
-        m.tube(t=>[.426+.031*cos(Math.PI*t),1.60+.064*Math.max(0,sin(Math.PI*t))**.45,-.110-.020*sin(Math.PI*t)],
-          t=>.005+.016*sin(Math.PI*(.12+.79*t)),skinC,skin,24,14);
-      }else{
-        m.tube(t=>[s*(.432-.018*sin(Math.PI*t)+.014*t),1.535-.080*t,-.109-.025*sin(Math.PI*t*.9)],t=>.005+.016*sin(Math.PI*(.12+.79*t)),skinC,skin,20,14);
-      }
+      makeHand(m,P,s,role==='auditor'&&s>0);
       if(!worker&&s<0){
         m.bone('fore'+side);
         loft([[1.576,.062,.069,.456,-.058],[1.59,.064,.07,.456,-.058],[1.607,.064,.07,.455,-.056]],P.leather,leather,18,5);
@@ -431,7 +549,7 @@
       if(role==='auditor'&&s>0){
         m.bone('tablet');
         // Original slim folio, carried vertically beside the thigh in the palm.
-        const tx=.420,ty=1.418,tz=-.065;
+        const tx=.400,ty=1.368,tz=-.065;
         const shapes=[[0,.962],[.10,.989],[.24,1],[.76,1],[.91,.988],[1,.963]];
         const point=(a,r,x)=>{
           const yy=sin(a),zz=cos(a);
@@ -440,7 +558,6 @@
         m.surface((u,v)=>point(u*TAU,sample(shapes,v)[0],tx+lerp(-.012,.012,v)),48,6,col('586372'),metal);
         for(const side of [-1,1])m.surface((u,v)=>point(u*TAU,.0001+v*.966,tx+side*.012),48,4,side>0?col('3b4656'):col('354054'),leather,side<0);
         m.ell(tx+.013,ty+.180,tz+.098,.004,.013,.013,col('202736'),metal,12,8);
-        for(let i=0;i<3;i++)m.ell(tx+.013,ty-.055+.005*i,tz-.032+.010*i,.0018,.010+.006*i,.003,col('8195a8'),metal,8,5);
       }
     }
   }

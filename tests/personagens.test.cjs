@@ -65,6 +65,30 @@ for(const role of ['auditor','manager','worker']){
     assert.ok(talkingLip>.008,'o lábio precisa acompanhar a fala');
     assert.ok(talkingTeeth>.010,'os dentes só são revelados durante a fala');
   });
+  test(`${role}: dedos e palma formam uma superfície única e fechada`,()=>{
+    const model=people.build(role);
+    for(const name of ['handL','handR']){
+      const part=model.parts.find(p=>p.bone===name),neighbors=new Map(),edges=new Map();
+      for(let i=part.first;i<part.first+part.count;i+=3){
+        const triangle=Array.from(model.indices.slice(i,i+3));
+        if(!triangle.every(index=>model.data[index*model.stride+9]===1))continue;
+        for(let j=0;j<3;j++){
+          const a=triangle[j],b=triangle[(j+1)%3],key=Math.min(a,b)+':'+Math.max(a,b);
+          edges.set(key,(edges.get(key)||0)+1);
+          if(!neighbors.has(a))neighbors.set(a,new Set());
+          neighbors.get(a).add(b);
+        }
+      }
+      assert.ok(neighbors.size>100,name);
+      for(const count of edges.values())assert.equal(count,2,'a pele não pode ter bordas abertas');
+      const visited=new Set(),queue=[neighbors.keys().next().value];
+      while(queue.length){
+        const vertex=queue.pop();if(visited.has(vertex))continue;visited.add(vertex);
+        for(const neighbor of neighbors.get(vertex))if(!visited.has(neighbor))queue.push(neighbor);
+      }
+      assert.equal(visited.size,neighbors.size,'todos os dedos devem estar unidos à palma');
+    }
+  });
 }
 
 test('o pé apoiado fica no lugar enquanto o corpo avança',()=>{

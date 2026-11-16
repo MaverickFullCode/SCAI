@@ -104,14 +104,30 @@
       if(tile==6.)mean=vec3(.39,.22,.12);
       return clamp(detail/max(mean,vec3(.02)),.58,1.6);
     }
+    vec3 classicOrganic(float m,vec3 base,vec3 n,vec3 v){
+      // Preserve the original skin palette and the smooth, broad hair highlights.
+      vec3 key=normalize(vec3(-.47,1.,.40));
+      float ceiling=.5+.5*n.y,broad=clamp((dot(n,key)+.20)/1.2,0.,1.);
+      float vis=visibility(n),office=1.-smoothstep(-1.,1.4,world.x);
+      vec3 ambient=mix(vec3(.43,.43,.46),vec3(.66,.71,.79),ceiling);
+      vec3 lit=base*(ambient+broad*mix(.11,.36,vis)*vec3(1.12,1.,.87));
+      float bounce=max(0.,dot(n,normalize(vec3(.8,.27,-.52))));
+      lit+=base*(.09+.09*office)*vec3(1.,.77,.57)*bounce;
+      if(m==21.)lit+=base*vec3(.15,.075,.047)*(1.-broad);
+      vec3 h=normalize(key+v);
+      lit+=(m==21.?.105:.17)*pow(max(dot(n,h),0.),24.)*mix(.35,1.,vis)*vec3(1.,.93,.82);
+      lit+=pow(1.-clamp(dot(n,v),0.,1.),3.)*.074*vec3(.76,.87,1.);
+      return mix(lit,vec3(.78,.83,.88),smoothstep(13.,37.,distance(world,uEye))*.25);
+    }
     vec3 portraitMaterial(float m,vec3 base,vec3 n,vec3 v){
-      bool skin=m==21.,hair=m==22.,cloth=m==20.,leather=m==23.,metal=m==24.,enamel=m==25.||m==27.;
+      if(m==21.||m==22.)return classicOrganic(m,base,n,v);
+      bool cloth=m==20.,leather=m==23.,metal=m==24.,enamel=m==25.||m==27.;
       float closeDetail=1.-smoothstep(1.5,4.5,distance(world,uEye));
       if(uPeopleReady){
-        float scale=skin?15.:(hair?4.5:(cloth?6.:4.));
-        float tile=skin?0.:(hair?4.:(leather?(base.r>.3?6.:5.):(base.b-base.r>.10?1.:3.)));
+        float scale=cloth?6.:4.;
+        float tile=leather?(base.r>.3?6.:5.):(base.b-base.r>.10?1.:3.);
         if(cloth&&base.r>.45&&base.b>base.r)tile=2.;
-        float amount=skin?.12:(hair?.27:(leather?.16:(cloth?.075:0.)));
+        float amount=leather?.16:(cloth?.075:0.);
         base*=mix(vec3(1.),peopleFinish(tile,uv*scale),amount*(.24+.76*closeDetail));
         if(m==27.){
           float angle=detailUv.x*6.2831853;
@@ -124,40 +140,31 @@
         float weave=sin(localPosition.x*1430.+localPosition.z*830.)*sin(localPosition.y*1480.);
         base*=1.+.003*weave*closeDetail;
       }
-      if(skin){
-        float pore=sin(localPosition.x*1850.)*sin(localPosition.y*2137.+localPosition.z*770.);
-        base*=1.+.003*pore*closeDetail;
-      }
       // A broad key, cool window fill and warm reflected light keep facial planes
       // legible at every gameplay orientation. Values are lit in linear space.
       vec3 albedo=pow(clamp(base,.001,1.),vec3(2.2));
       vec3 key=normalize(v*.82+vec3(-.60,.92,.12));
       vec3 fill=normalize(vec3(.7,.38,-.65));
       float nl=max(dot(n,key),0.),nv=max(dot(n,v),.035);
-      float wrap=skin?clamp((dot(n,key)+.25)/1.25,0.,1.):nl;
+      float wrap=nl;
       float hemisphere=clamp(n.y*.5+.5,0.,1.);
       vec3 ambient=mix(vec3(.22,.23,.27),vec3(.43,.48,.56),hemisphere);
       float occlusion=1.;
       if(localPosition.y>2.52&&localPosition.y<2.66)occlusion-=.16*(1.-smoothstep(2.56,2.66,localPosition.y));
       vec3 lit=albedo*(ambient*occlusion+wrap*vec3(.77,.66,.55)*mix(.82,1.,visibility(n)));
       lit+=albedo*max(dot(n,fill),0.)*vec3(.10,.14,.19);
-      float rough=skin?.48:(hair?.48:(leather?.35:(metal?.27:(enamel?.23:.78))));
+      float rough=leather?.35:(metal?.27:(enamel?.23:.78));
       vec3 h=normalize(key+v);
       float nh=max(dot(n,h),0.),vh=max(dot(v,h),0.),a=rough*rough,a2=a*a;
       float denominator=nh*nh*(a2-1.)+1.;
       float distribution=a2/(3.14159265*denominator*denominator);
       float k=(rough+1.)*(rough+1.)*.125;
       float geometry=(nl/(nl*(1.-k)+k))*(nv/(nv*(1.-k)+k));
-      vec3 f0=metal?mix(vec3(.14),albedo,.68):vec3(skin?.028:.04);
+      vec3 f0=metal?mix(vec3(.14),albedo,.68):vec3(.04);
       vec3 fresnel=f0+(1.-f0)*pow(1.-vh,5.);
       lit+=fresnel*distribution*geometry/max(.04,4.*nl*nv)*nl*.75*vec3(1.,.94,.85);
       float edge=pow(1.-nv,3.);
-      if(skin)lit+=albedo*vec3(.17,.055,.025)*(.20+edge)*max(.0,1.-wrap);
       if(cloth)lit+=albedo*edge*.23+vec3(.004,.006,.011)*pow(max(dot(n,h),0.),7.);
-      if(hair){
-        float sheen=pow(max(dot(n,h),0.),14.);
-        lit+=vec3(.021,.014,.010)*sheen+vec3(.008,.012,.019)*edge;
-      }
       if(enamel)lit+=vec3(.13,.15,.17)*pow(max(dot(n,h),0.),95.);
       lit+=edge*max(dot(n,normalize(vec3(.52,.65,-.45))),0.)*vec3(.026,.040,.064);
       return pow(clamp(lit*1.10/(1.+lit*.10),0.,1.),vec3(1./2.2));
