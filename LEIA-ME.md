@@ -49,3 +49,7 @@ No celular, os botões **Missão** e **Trabalho** abrem os respectivos painéis 
 ## Conferência do upgrade visual
 
 A missão foi percorrida até o resultado no Microsoft Edge, com abertura pelo menu e diretamente pelo arquivo da fase. Foram conferidos entrevista, feedback instantâneo, metas e saldo, mudanças de plano sucessivas, marcadores e relatório. A cena rodou a aproximadamente 60 FPS a 1180 × 756 em Intel UHD Graphics neste computador. O layout foi conferido em viewport de 390 × 844 com perguntas e respostas em 16 px e diálogo ocupando 50% da altura; tablets e computadores mantêm 25%. O desempenho em um celular físico ainda requer conferência.
+
+## Consulta visual do tablet (teste local sem commit)
+
+Pressione **F** ou o botão F nos controles de toque para consultar o tablet, em pé ou sentado. O auditor levanta o braço, olha para gráficos e números decorativos durante três segundos e retorna à pose anterior com a tela apagada. O movimento fica suspenso durante a consulta; saldo e missão não são alterados. Esta função está em avaliação local, posterior ao commit Versão Alfa 0.3.

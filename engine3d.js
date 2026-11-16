@@ -80,6 +80,7 @@
       this.hidePlayer = false;
       this.door = {open:0,target:0};
       this.seating = null;
+      this.tabletRead = null;
       this.bind();this.resize();this.loop=this.loop.bind(this);requestAnimationFrame(this.loop);
     }
     bind() {
@@ -87,14 +88,15 @@
       let cameraPointer = null, lastX = 0;
       document.addEventListener('keydown', event => {
         const key = event.key.toLowerCase();
-        if (['w','s','a','d','arrowup','arrowdown','arrowleft','arrowright','e','q',' '].includes(key)) {
+        if (['w','s','a','d','arrowup','arrowdown','arrowleft','arrowright','e','q','f',' '].includes(key)) {
           if (['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName)) return;
           event.preventDefault();
         }
         this.keys[key] = true;
         if(!event.repeat&&!this.events.isBlocked?.()){
-          if(key==='q'&&!this.seating)this.events.onInteract?.();
+          if(key==='q'&&!this.seating&&!this.tabletRead)this.events.onInteract?.();
           if(key==='e')this.usePhysical();
+          if(key==='f')this.consultTablet();
         }
       });
       document.addEventListener('keyup', event => {
@@ -133,6 +135,17 @@
     resize(){const scale=this.low?.68:1;const dpr=Math.min(devicePixelRatio||1,1.3)*scale;const w=Math.max(2,Math.floor(this.canvas.clientWidth*dpr)),h=Math.max(2,Math.floor(this.canvas.clientHeight*dpr));if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;this.gl.viewport(0,0,w,h)}}
     setEco(val){this.low=!!val;this.resize()}
     setInput(key,val){this.keys[key]=val}
+    consultTablet(){
+      if(this.paused||this.events.isBlocked?.()||this.tabletRead||(this.seating&&this.seating.phase!=='seated'))return false;
+      this.tabletRead={elapsed:0,blend:0,screen:false};this.walking=false;return true;
+    }
+    updateTablet(dt){
+      const read=this.tabletRead;if(!read)return;
+      read.elapsed+=dt;
+      read.blend=read.elapsed<.55?ease(read.elapsed/.55):read.elapsed<3.55?1:1-ease((read.elapsed-3.55)/.55);
+      read.screen=read.elapsed>=.55&&read.elapsed<3.55;
+      if(read.elapsed>=4.1)this.tabletRead=null;
+    }
     doorBoxes(open=this.door?.open??1){
       return [-1,1].map(side=>({x:.12,z:side*(1.3+2.55*open),hx:.065,hz:1.3,top:5.05}));
     }
@@ -187,7 +200,7 @@
       return seat.pathIndex>=seat.path.length;
     }
     usePhysical(){
-      if(this.paused||this.events.isBlocked?.())return false;
+      if(this.paused||this.events.isBlocked?.()||this.tabletRead)return false;
       const action=this.physicalAction();if(!action||action.disabled)return false;
       if(action.kind==='door'){
         this.door.target=this.door.target?0:1;return true;
@@ -303,8 +316,8 @@
       }
       return distanceSq<radius*radius;
     }
-    update(dt){this.t+=dt;if(!this.paused&&!this.events.isBlocked?.())this.updateFurniture(dt);let yaw=this.yaw;let speed=dt*3.6,dx=0,dz=0; if(this.keys.w||this.keys.arrowup){dx-=Math.sin(yaw);dz-=Math.cos(yaw)}if(this.keys.s||this.keys.arrowdown){dx+=Math.sin(yaw);dz+=Math.cos(yaw)}if(this.keys.a){dx-=Math.cos(yaw);dz+=Math.sin(yaw)}if(this.keys.d){dx+=Math.cos(yaw);dz-=Math.sin(yaw)}if(this.keys.arrowleft)this.yaw+=dt*1.65;if(this.keys.arrowright)this.yaw-=dt*1.65;
-      const moving=Math.hypot(dx,dz)>.01,controlAllowed=!this.paused&&!this.events.isBlocked?.()&&!this.seating;this.walking=!!this.seating?.moving;
+    update(dt,realDt=dt){this.t+=dt;if(!this.paused&&!this.events.isBlocked?.()){this.updateFurniture(dt);this.updateTablet(realDt);}let yaw=this.yaw;let speed=dt*3.6,dx=0,dz=0; if(this.keys.w||this.keys.arrowup){dx-=Math.sin(yaw);dz-=Math.cos(yaw)}if(this.keys.s||this.keys.arrowdown){dx+=Math.sin(yaw);dz+=Math.cos(yaw)}if(this.keys.a){dx-=Math.cos(yaw);dz+=Math.sin(yaw)}if(this.keys.d){dx+=Math.cos(yaw);dz-=Math.sin(yaw)}if(this.keys.arrowleft)this.yaw+=dt*1.65;if(this.keys.arrowright)this.yaw-=dt*1.65;
+      const moving=Math.hypot(dx,dz)>.01,controlAllowed=!this.paused&&!this.events.isBlocked?.()&&!this.seating&&!this.tabletRead;this.walking=!!this.seating?.moving;
       if(moving&&controlAllowed){let n=Math.hypot(dx,dz);dx=dx/n*speed;dz=dz/n*speed;const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.12)),stepX=dx/steps,stepZ=dz/steps,startX=this.player.x,startZ=this.player.z;
         for(let i=0;i<steps;i++){if(this.canMove(this.player.x+stepX,this.player.z))this.player.x+=stepX;if(this.canMove(this.player.x,this.player.z+stepZ))this.player.z+=stepZ;}
         const movedX=this.player.x-startX,movedZ=this.player.z-startZ;
@@ -337,7 +350,7 @@
       this.resize();
       this.renderer.draw(this);
     }
-    loop(ts){requestAnimationFrame(this.loop);if(this.paused){this.last=ts;return;}let dt=Math.min(.038,Math.max(.008,(ts-this.last)/1000||.016));this.last=ts;this.update(dt);if(this.low){this.acc+=dt;if(this.acc<1/30)return;this.acc=0;}this.render();this.events.onFrame?.(this);}
+    loop(ts){requestAnimationFrame(this.loop);if(this.paused){this.last=ts;return;}let dt=Math.min(.038,Math.max(.008,(ts-this.last)/1000||.016));const realDt=Math.max(0,(ts-this.last)/1000||.016);this.last=ts;this.update(dt,realDt);if(this.low){this.acc+=dt;if(this.acc<1/30)return;this.acc=0;}this.render();this.events.onFrame?.(this);}
     distance(x,z){return Math.hypot(this.player.x-x,this.player.z-z)}
   }
   global.SCAI3D={Engine,colors:C,chairs:CHAIRS};

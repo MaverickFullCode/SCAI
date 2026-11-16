@@ -162,8 +162,8 @@
   ];}
   function relevantSpots(){if(st.stage==='interview')return [{key:'interview',name:'Falar com o gestor',x:interviewTarget.x,z:interviewTarget.z,y:.05}];if(st.stage==='execution')return techs.map(t=>({key:t.id,name:t.place,x:t.pos[0],z:t.pos[1],y:.05}));return [];}
   function nearest(){let list=relevantSpots().map(h=>({...h,dist:engine?engine.distance(h.x,h.z):999})).sort((a,b)=>a.dist-b.dist);return list[0]||null;}
-  function interact(h){if(st.modal||st.dialogueOpen)return;if(engine?.seating){note('Pressione E ou toque em Levantar antes de continuar a missão.');return;}if(!h)return;if(h.dist>2.85){note('Aproxime-se do local antes de interagir.');return;}if(h.key==='interview')interviewModal();else if(st.stage==='execution')procedureModal(h.key);}
-  function guide(){if(!engine)return;if(engine.seating){note('Levante-se da cadeira para localizar o próximo objetivo.');return;}if(st.stage==='welcome'){intro();return;}if(st.stage==='planning'){planModal();return;}if(st.stage==='report'){reportModal();return;}if(st.stage==='result'){resultModal();return;}
+  function interact(h){if(st.modal||st.dialogueOpen)return;if(engine?.tabletRead){note('Aguarde a consulta do tablet terminar.');return;}if(engine?.seating){note('Pressione E ou toque em Levantar antes de continuar a missão.');return;}if(!h)return;if(h.dist>2.85){note('Aproxime-se do local antes de interagir.');return;}if(h.key==='interview')interviewModal();else if(st.stage==='execution')procedureModal(h.key);}
+  function guide(){if(!engine)return;if(engine.tabletRead){note('Aguarde a consulta do tablet terminar.');return;}if(engine.seating){note('Levante-se da cadeira para localizar o próximo objetivo.');return;}if(st.stage==='welcome'){intro();return;}if(st.stage==='planning'){planModal();return;}if(st.stage==='report'){reportModal();return;}if(st.stage==='result'){resultModal();return;}
     let h;
     if(st.stage==='execution'){
       const remaining=st.budget-st.spent;
@@ -215,7 +215,9 @@
     let physical=blocked?null:engine.physicalAction?.();
     if(physical&&engine.seating?.phase==='aligning')physical={...physical,label:'Posicionando…',hint:'Aguarde o auditor se posicionar para sentar.',disabled:true};
     if(physical&&engine.seating?.phase==='leaving')physical={...physical,label:'Saindo…',hint:'Aguarde o auditor se afastar da cadeira.',disabled:true};
-    $('#actionBtn').disabled=!!engine.seating;$('#reportBtn').disabled=!!engine.seating;
+    $('#actionBtn').disabled=!!(engine.seating||engine.tabletRead);$('#reportBtn').disabled=!!(engine.seating||engine.tabletRead);
+    $('#tabletBtn').disabled=blocked||!!engine.tabletRead||!!(engine.seating&&engine.seating.phase!=='seated');
+    if(physical&&engine.tabletRead)physical={...physical,disabled:true};
     $('#action').classList.toggle('visible',!blocked&&!engine.seating&&!!near&&near.dist<=2.85);
     if(near){$('#actionTitle').textContent=near.name;$('#actionSubtitle').textContent=st.stage==='interview'?'Pressione Q para conversar':'Pressione Q para executar se houver saldo';}
     $('#physicalAction').classList.toggle('visible',!!physical);
@@ -275,7 +277,7 @@
     catch(e){console.error(e);$('#fallback').hidden=false;$('#fallback').style.display='grid';return;}
     $('#quality').onclick=()=>{engine.setEco(!engine.low);$('#quality').textContent=engine.low?'⚙ Eco ✓':'⚙ Eco';note(engine.low?'Modo econômico: resolução reduzida e até 30 FPS.':'Qualidade padrão ativada.')};
     $('#exit').onclick=()=>{if(window.parent!==window){parent.postMessage({type:'scai:exit'},'*')}else location.href='../SCAI.html'};
-    $('#actionBtn').onclick=()=>interact(near);$('#physicalBtn').onclick=()=>{if(st.modal||st.dialogueOpen)return;engine.usePhysical();updateNearbyAction();};$('#routeBtn').onclick=()=>{closeHudPanels();guide();};$('#reportBtn').onclick=reportModal;$('#modalClose').onclick=()=>{hide();if(st.stage==='welcome')setStage('interview')};
+    $('#tabletBtn').onclick=()=>{engine.consultTablet();updateNearbyAction();};$('#actionBtn').onclick=()=>interact(near);$('#physicalBtn').onclick=()=>{if(st.modal||st.dialogueOpen)return;engine.usePhysical();updateNearbyAction();};$('#routeBtn').onclick=()=>{closeHudPanels();guide();};$('#reportBtn').onclick=reportModal;$('#modalClose').onclick=()=>{hide();if(st.stage==='welcome')setStage('interview')};
     bindTouchControls();
     document.addEventListener('keydown',e=>{if(e.key==='Escape'&&st.modal&&st.stage!=='result')hide();});
     intro();}

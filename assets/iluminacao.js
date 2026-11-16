@@ -53,13 +53,49 @@
     uniform bool uShadowReady,uPeopleReady;
     uniform vec3 uEye;
     uniform vec2 uPlayer;
-    uniform float uOpacity;
+    uniform float uOpacity,uTabletTime;
     varying vec3 world,normal,color;
     varying vec3 localPosition;
     varying vec2 detailUv;
     varying vec2 uv;
     varying float material;
     ${shadowProjection}
+    float screenRect(vec2 p,vec2 a,vec2 b){return step(a.x,p.x)*step(a.y,p.y)*step(p.x,b.x)*step(p.y,b.y);}
+    float screenDigit(vec2 p,float n){
+      float mask=63.;
+      if(n==1.)mask=6.;else if(n==2.)mask=91.;else if(n==3.)mask=79.;else if(n==4.)mask=102.;
+      else if(n==5.)mask=109.;else if(n==6.)mask=125.;else if(n==7.)mask=7.;else if(n==8.)mask=127.;else if(n==9.)mask=111.;
+      float value=0.;
+      value+=mod(floor(mask/1.),2.)*screenRect(p,vec2(.2,.85),vec2(.8,.96));
+      value+=mod(floor(mask/2.),2.)*screenRect(p,vec2(.76,.52),vec2(.88,.88));
+      value+=mod(floor(mask/4.),2.)*screenRect(p,vec2(.76,.12),vec2(.88,.48));
+      value+=mod(floor(mask/8.),2.)*screenRect(p,vec2(.2,.04),vec2(.8,.15));
+      value+=mod(floor(mask/16.),2.)*screenRect(p,vec2(.12,.12),vec2(.24,.48));
+      value+=mod(floor(mask/32.),2.)*screenRect(p,vec2(.12,.52),vec2(.24,.88));
+      value+=mod(floor(mask/64.),2.)*screenRect(p,vec2(.2,.45),vec2(.8,.56));
+      return min(1.,value);
+    }
+    vec3 tabletScreen(vec2 original){
+      if(uTabletTime<0.)return vec3(.006,.009,.014);
+      vec2 p=vec2(1.-original.x,1.-original.y);
+      vec3 base=vec3(.025,.065,.105);
+      float area=screenRect(p,vec2(.09,.13),vec2(.91,.61));
+      float grid=step(.97,fract(p.y*20.))*area;
+      base+=vec3(.035,.07,.09)*grid;
+      float column=floor((p.x-.12)/.15),cell=fract((p.x-.12)/.15);
+      float h=.16+.20*(.5+.5*sin(column*1.7+uTabletTime*1.4));
+      float bars=area*step(column,4.)*step(0.,column)*step(.15,cell)*step(cell,.78)*step(.16,p.y)*step(p.y,.16+h);
+      base=mix(base,vec3(.10,.63,.82),bars);
+      float curve=area*(1.-smoothstep(.005,.012,abs(p.y-(.40+.10*sin(p.x*9.+uTabletTime)))));
+      base=mix(base,vec3(.66,.89,.37),curve);
+      float digits=screenRect(p,vec2(.12,.70),vec2(.87,.84));
+      float dc=floor((p.x-.12)/.125),n=mod(floor(uTabletTime*2.)+dc*7.+4.,10.);
+      digits*=screenDigit(vec2(fract((p.x-.12)/.125),(p.y-.70)/.14),n);
+      base=mix(base,vec3(.70,.92,1.),digits);
+      base=mix(base,vec3(.20,.68,.88),screenRect(p,vec2(.12,.91),vec2(.64,.934)));
+      base=mix(base,vec3(.89,.68,.28),step(distance(p,vec2(.83,.92)),.025));
+      return base;
+    }
     float visibility(vec3 n){
       if(!uShadowReady)return 1.;
       vec2 base=lightUV(world);
@@ -187,6 +223,7 @@
         return;
       }
       vec3 base=color;
+      if(m==28.){gl_FragColor=vec4(tabletScreen(detailUv),1.);return;}
       if(actor){
         gl_FragColor=vec4(portraitMaterial(m,base,normalize(normal),normalize(uEye-world)),1.);
         return;

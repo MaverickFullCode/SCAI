@@ -12,7 +12,7 @@
       for(const name of ['Position','Normal','Color','Uv','Material','Skin','Detail']){
         this.attr[name]=gl.getAttribLocation(this.program,'a'+name);
       }
-      for(const name of ['Model','VP','Eye','Atlas','Graphics','Shadow','ShadowReady','Actor','Player','Bones[0]','People','PeopleReady','Opacity']){
+      for(const name of ['Model','VP','Eye','Atlas','Graphics','Shadow','ShadowReady','Actor','Player','Bones[0]','People','PeopleReady','Opacity','TabletTime']){
         this.uniform[name]=gl.getUniformLocation(this.program,'u'+name);
       }
       const mesh=new SCAIMesh();
@@ -179,9 +179,10 @@
       if(engine.cameraOverlaps(bounds,this.hiddenActors.has(role)?.06:0)){this.hiddenActors.add(role);return false;}
       this.hiddenActors.delete(role);return true;
     }
-    drawPerson(x,z,time,walking,role,dir,mouth,walkDistance,blinkClock=time,seatBlend=0){
+    drawPerson(x,z,time,walking,role,dir,mouth,walkDistance,blinkClock=time,seatBlend=0,tabletRead=null){
       const gl=this.gl, actor=this.actors[role];
-      const pose=SCAIPeople.pose(x,z,time,walking,role,dir,mouth,walkDistance,blinkClock,seatBlend);
+      const pose=SCAIPeople.pose(x,z,time,walking,role,dir,mouth,walkDistance,blinkClock,seatBlend,tabletRead?.blend||0);
+      gl.uniform1f(this.uniform.TabletTime,role==='auditor'&&tabletRead?.screen?tabletRead.elapsed-.55:-1);
       for(let i=0;i<actor.bones.length;i++)this.boneMatrices.set(pose[actor.bones[i]],i*16);
       gl.uniformMatrix4fv(this.uniform['Bones[0]'],false,this.boneMatrices);
       this.bind(actor.geometry);
@@ -241,7 +242,7 @@
       this.drawGeometry(this.contacts);
       gl.depthMask(true); gl.disable(gl.BLEND);
       gl.uniform1i(this.uniform.Actor,1);
-      if(!focus&&!engine.hidePlayer)this.drawPerson(p.x,p.z,engine.t,engine.walking,'auditor',p.dir,false,engine.walkDistance,blinkClock,engine.seating?.blend||0);
+      if(!focus&&!engine.hidePlayer)this.drawPerson(p.x,p.z,engine.t,engine.walking,'auditor',p.dir,false,engine.walkDistance,blinkClock,engine.seating?.blend||0,engine.tabletRead);
       if(this.personVisible(engine,-10.7,-5.2,'manager',Math.PI))this.drawPerson(-10.7,-5.2,engine.t,false,'manager',Math.PI,!!engine.events.isTalking?.(),undefined,blinkClock);
       if(!focus&&this.personVisible(engine,3.3,-2.25,'worker',.6))this.drawPerson(3.3,-2.25,engine.t,false,'worker',.6,false,undefined,blinkClock);
       if(this.door){

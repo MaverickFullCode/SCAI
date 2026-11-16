@@ -553,6 +553,8 @@
         m.surface((u,v)=>point(u*TAU,sample(shapes,v)[0],tx+lerp(-.012,.012,v)),48,6,col('586372'),metal);
         for(const side of [-1,1])m.surface((u,v)=>point(u*TAU,.0001+v*.966,tx+side*.012),48,4,side>0?col('3b4656'):col('354054'),leather,side<0);
         m.ell(tx+.013,ty+.180,tz+.098,.004,.013,.013,col('202736'),metal,12,8);
+        // Screen shares the tablet bone: it remains black outside consultation.
+        m.surface((u,v)=>[tx-.0128,ty+(v-.5)*.374,tz+(u-.5)*.240],1,1,col('ffffff'),8,true);
       }
     }
   }
@@ -591,18 +593,19 @@
   const restThighAngle = Math.atan2(.017,hipHeight-kneeHeight);
   const restShinAngle = Math.atan2(-.020,kneeHeight-ankleHeight);
 
-  function pose(x,z,time=0,walking=false,role='auditor',dir=0,mouth=false,walkDistance,blinkClock=time,seatBlend=0){
+  function pose(x,z,time=0,walking=false,role='auditor',dir=0,mouth=false,walkDistance,blinkClock=time,seatBlend=0,tabletBlend=0){
     const roleOffset=role==='manager'?1.3:role==='worker'?2.7:0,t=time+roleOffset;
     // The cushion top is .935 scene units. A .375 drop puts the lowest
     // posterior trouser vertices on that surface, rather than inside the seat.
     const seated=clamp(seatBlend),seatDrop=.375*seated;
-    const w=walking&&!seated?1:0, breath=sin(t*1.65), answer=mouth?1:0;
+    const reading=role==='auditor'?clamp(tabletBlend):0;
+    const w=walking&&!seated&&!reading?1:0, breath=sin(t*1.65), answer=mouth?1:0;
     const cycle=(walkDistance ?? time*3.6)/strideDistance;
     const phase=cycle*TAU;
     const root=transform(x,seatDrop?-seatDrop:0,z,0,dir),rig={};
     rig.body=joint(multiply(root,transform(0,.003*breath,0)),[0,1.66,0],0,-sin(phase)*.055*w,cos(phase)*.013*w);
     if(seated)rig.body=joint(rig.body,[0,hipHeight,.007],.10*sin(Math.PI*seated));
-    rig.head=joint(rig.body,[0,2.58,0],-.013*breath+.018*sin(t*5)*answer,.029*sin(t*.66)+.033*sin(t*2.5)*answer,.006*sin(t*.94));
+    rig.head=joint(rig.body,[0,2.58,0],lerp(-.013*breath+.018*sin(t*5)*answer,-.42522,reading),lerp(.029*sin(t*.66)+.033*sin(t*2.5)*answer,.86646,reading),.006*sin(t*.94)*(1-reading));
     const vis=answer*(.4+.33*sin(t*19)+.20*sin(t*29+1)+.07*sin(t*42)),op=Math.max(0,vis);
     rig.jaw=joint(rig.head,[0,headHeight(2.785,role),.028],-.088*op);
     const reveal=smooth(.025,.18,op),level=headHeight(mouthHeight,role);
@@ -690,7 +693,9 @@
         armAngle=lerp(armAngle,.26,seated);
         foreAngle=lerp(foreAngle,.415,seated);
       }
-      rig['arm'+side]=joint(rig.body,[s*.356,2.411,.016],armAngle,.007*breath,-s*(.015+.019*gesture+(carry?.27:.04)*seated));
+      if(carry&&reading){armAngle=lerp(armAngle,.25,reading);foreAngle=lerp(foreAngle,2.0,reading);}
+      const armRoll=-s*(.015+.019*gesture+(carry?.27:.04)*seated);
+      rig['arm'+side]=joint(rig.body,[s*.356,2.411,.016],armAngle,.007*breath,carry?lerp(armRoll,.30,reading):armRoll);
       rig['fore'+side]=joint(rig['arm'+side],[s*.429,2.011,.005],foreAngle);
       rig['hand'+side]=rig['fore'+side];
       if(tableHand){
@@ -698,7 +703,12 @@
         rig['hand'+side]=joint(rig['fore'+side],wrist,(Math.PI/2-.15-armAngle-foreAngle)*seated);
         rig['hand'+side]=joint(rig['hand'+side],wrist,0,Math.PI/2*seated);
       }
-      if(carry)rig.tablet=rig['hand'+side];
+      if(carry){
+        // Face the display towards the eyes, with its top upright. A yaw-only
+        // wrist turn left the display tilted away from the reader.
+        if(reading)rig['hand'+side]=joint(rig['fore'+side],[s*.456,1.595,-.055],.52313*reading,.58715*reading,.34955*reading);
+        rig.tablet=rig['hand'+side];
+      }
     }
     return rig;
   }
