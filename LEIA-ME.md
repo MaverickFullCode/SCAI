@@ -2,6 +2,8 @@
 
 Leia também [MEMORIA-DO-PROJETO.md](MEMORIA-DO-PROJETO.md) para o registro permanente da conversa de origem, metodologia e decisões visuais.
 
+Nesta ramificação, veja [o experimento visual dos personagens](docs/personagens-realistas.md), com capturas reais, materiais e validação. Os três modelos receberam rosto, cabelo, alfaiataria, mãos e materiais novos, com deformação das articulações na GPU. Para conferir os testes de geometria e animação, execute `node --test tests/personagens.test.cjs`.
+
 **Entrada:** abrir `SCAI.html` no Chrome, Edge ou Firefox moderno. O jogo também pode ser servido por qualquer servidor estático (recomendado para distribuição), por exemplo `python -m http.server 8000` dentro da pasta SCAI e então acessar `http://localhost:8000/SCAI.html`.
 
 ## Estrutura

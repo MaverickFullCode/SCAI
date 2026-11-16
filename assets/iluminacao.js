@@ -20,15 +20,28 @@
   const vert=`
     attribute vec3 aPosition,aNormal,aColor;
     attribute vec2 aUv;
+    attribute vec3 aSkin;
+    attribute vec2 aDetail;
     attribute float aMaterial;
     uniform mat4 uModel,uVP;
+    uniform mat4 uBones[21];
     uniform bool uActor;
     varying vec3 world,normal,color;
+    varying vec3 localPosition;
+    varying vec2 detailUv;
     varying vec2 uv;
     varying float material;
     void main(){
-      world=(uModel*vec4(aPosition,1.)).xyz;
-      normal=mat3(uModel)*aNormal;
+      mat4 model=uModel;
+      if(uActor)model=uBones[int(aSkin.x)]*(1.-aSkin.z)+uBones[int(aSkin.y)]*aSkin.z;
+      world=(model*vec4(aPosition,1.)).xyz;
+      // Cofactors keep normals perpendicular to the surface during joint blending.
+      vec3 cx=cross(model[1].xyz,model[2].xyz);
+      vec3 cy=cross(model[2].xyz,model[0].xyz);
+      vec3 cz=cross(model[0].xyz,model[1].xyz);
+      normal=mat3(cx,cy,cz)*aNormal;
+      localPosition=aPosition;
+      detailUv=aDetail;
       color=aColor;
       material=uActor ? 20.+aUv.x : aMaterial;
       uv=uActor ? vec2(aPosition.x+aPosition.z*.65,aPosition.y)*1.5 : aUv;
@@ -36,11 +49,13 @@
     }`;
   const frag=`
     precision highp float;
-    uniform sampler2D uAtlas,uGraphics,uShadow;
-    uniform bool uShadowReady;
+    uniform sampler2D uAtlas,uGraphics,uShadow,uPeople;
+    uniform bool uShadowReady,uPeopleReady;
     uniform vec3 uEye;
     uniform vec2 uPlayer;
     varying vec3 world,normal,color;
+    varying vec3 localPosition;
+    varying vec2 detailUv;
     varying vec2 uv;
     varying float material;
     ${shadowProjection}
@@ -76,6 +91,77 @@
       else mean=vec3(.94,.90,.82);
       return clamp(sampleColor/mean,.54,1.65);
     }
+    vec3 peopleFinish(float tile,vec2 coord){
+      vec2 cell=vec2(mod(tile,4.),floor(tile*.25));
+      vec2 f=1.-abs(mod(coord,2.)-1.);
+      vec3 detail=texture2D(uPeople,(cell+.012+.976*f)/vec2(4.,2.)).rgb;
+      vec3 mean=vec3(.89,.65,.49);
+      if(tile==1.)mean=vec3(.07,.13,.23);
+      if(tile==2.)mean=vec3(.62,.76,.91);
+      if(tile==3.)mean=vec3(.19,.21,.23);
+      if(tile==4.)mean=vec3(.21,.12,.07);
+      if(tile==5.)mean=vec3(.14,.15,.16);
+      if(tile==6.)mean=vec3(.39,.22,.12);
+      return clamp(detail/max(mean,vec3(.02)),.58,1.6);
+    }
+    vec3 portraitMaterial(float m,vec3 base,vec3 n,vec3 v){
+      bool skin=m==21.,hair=m==22.,cloth=m==20.,leather=m==23.,metal=m==24.,enamel=m==25.||m==27.;
+      float closeDetail=1.-smoothstep(1.5,4.5,distance(world,uEye));
+      if(uPeopleReady){
+        float scale=skin?15.:(hair?4.5:(cloth?6.:4.));
+        float tile=skin?0.:(hair?4.:(leather?(base.r>.3?6.:5.):(base.b-base.r>.10?1.:3.)));
+        if(cloth&&base.r>.45&&base.b>base.r)tile=2.;
+        float amount=skin?.12:(hair?.27:(leather?.16:(cloth?.075:0.)));
+        base*=mix(vec3(1.),peopleFinish(tile,uv*scale),amount*(.24+.76*closeDetail));
+        if(m==27.){
+          float angle=detailUv.x*6.2831853;
+          vec2 iris=.5+.48*vec2(sin(angle),-cos(angle))*detailUv.y;
+          vec3 pigment=texture2D(uPeople,(vec2(3.,1.)+.015+.97*iris)/vec2(4.,2.)).rgb;
+          base=mix(base,pigment,.80);
+        }
+      }
+      if(cloth){
+        float weave=sin(localPosition.x*1430.+localPosition.z*830.)*sin(localPosition.y*1480.);
+        base*=1.+.003*weave*closeDetail;
+      }
+      if(skin){
+        float pore=sin(localPosition.x*1850.)*sin(localPosition.y*2137.+localPosition.z*770.);
+        base*=1.+.003*pore*closeDetail;
+      }
+      // A broad key, cool window fill and warm reflected light keep facial planes
+      // legible at every gameplay orientation. Values are lit in linear space.
+      vec3 albedo=pow(clamp(base,.001,1.),vec3(2.2));
+      vec3 key=normalize(v*.82+vec3(-.60,.92,.12));
+      vec3 fill=normalize(vec3(.7,.38,-.65));
+      float nl=max(dot(n,key),0.),nv=max(dot(n,v),.035);
+      float wrap=skin?clamp((dot(n,key)+.25)/1.25,0.,1.):nl;
+      float hemisphere=clamp(n.y*.5+.5,0.,1.);
+      vec3 ambient=mix(vec3(.22,.23,.27),vec3(.43,.48,.56),hemisphere);
+      float occlusion=1.;
+      if(localPosition.y>2.52&&localPosition.y<2.66)occlusion-=.16*(1.-smoothstep(2.56,2.66,localPosition.y));
+      vec3 lit=albedo*(ambient*occlusion+wrap*vec3(.77,.66,.55)*mix(.82,1.,visibility(n)));
+      lit+=albedo*max(dot(n,fill),0.)*vec3(.10,.14,.19);
+      float rough=skin?.48:(hair?.48:(leather?.35:(metal?.27:(enamel?.23:.78))));
+      vec3 h=normalize(key+v);
+      float nh=max(dot(n,h),0.),vh=max(dot(v,h),0.),a=rough*rough,a2=a*a;
+      float denominator=nh*nh*(a2-1.)+1.;
+      float distribution=a2/(3.14159265*denominator*denominator);
+      float k=(rough+1.)*(rough+1.)*.125;
+      float geometry=(nl/(nl*(1.-k)+k))*(nv/(nv*(1.-k)+k));
+      vec3 f0=metal?mix(vec3(.14),albedo,.68):vec3(skin?.028:.04);
+      vec3 fresnel=f0+(1.-f0)*pow(1.-vh,5.);
+      lit+=fresnel*distribution*geometry/max(.04,4.*nl*nv)*nl*.75*vec3(1.,.94,.85);
+      float edge=pow(1.-nv,3.);
+      if(skin)lit+=albedo*vec3(.17,.055,.025)*(.20+edge)*max(.0,1.-wrap);
+      if(cloth)lit+=albedo*edge*.23+vec3(.004,.006,.011)*pow(max(dot(n,h),0.),7.);
+      if(hair){
+        float sheen=pow(max(dot(n,h),0.),14.);
+        lit+=vec3(.021,.014,.010)*sheen+vec3(.008,.012,.019)*edge;
+      }
+      if(enamel)lit+=vec3(.13,.15,.17)*pow(max(dot(n,h),0.),95.);
+      lit+=edge*max(dot(n,normalize(vec3(.52,.65,-.45))),0.)*vec3(.026,.040,.064);
+      return pow(clamp(lit*1.10/(1.+lit*.10),0.,1.),vec3(1./2.2));
+    }
     void main(){
       float m=floor(material+.5);
       bool actor=m>=20., skin=m==21., hair=m==22., windowPane=m==14.;
@@ -85,6 +171,10 @@
         return;
       }
       vec3 base=color;
+      if(actor){
+        gl_FragColor=vec4(portraitMaterial(m,base,normalize(normal),normalize(uEye-world)),1.);
+        return;
+      }
       if(m>=12. && m<=14.) base=texture2D(uGraphics,uv).rgb;
       if(windowPane){ gl_FragColor=vec4(base*.97+vec3(.022,.027,.035),1.);return; }
       if(m<8. || m==20. || m==23.) {
