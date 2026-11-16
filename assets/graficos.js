@@ -97,12 +97,12 @@
   function dashboard(ctx) {
     rect(ctx, 0, 0, 768, 432, gradient(ctx, 0, 432, 700, -80, [[0,'#123352'], [.55,'#123b69'], [1,'#225b98']]));
     barsLogo(ctx, 26, 20, 43, '#8edffd');
-    text(ctx, 'Visão geral da auditoria', 85, 55, 35, '#f0f8ff', 630);
+    text(ctx, 'Escolha seus testes', 85, 55, 35, '#f0f8ff', 630);
     text(ctx, 'AURORA  /  DISTRIBUIÇÃO S.A.', 86, 79, 14, '#9ec8e7', 650);
     rect(ctx, 26, 99, 716, 1, '#5f86a6');
-    text(ctx, 'Custo dos procedimentos', 28, 139, 25, '#f5faff', 610);
-    text(ctx, 'Pontos técnicos por aplicação', 29, 162, 15, '#bad3e8');
-    const tests = [['Docs.',2], ['Cont.',3], ['Recálc.',2], ['Anál.',1], ['Conf.',3]];
+    text(ctx, 'Custo de cada teste', 28, 139, 25, '#f5faff', 610);
+    text(ctx, 'Cada teste pode ser feito uma vez', 29, 162, 15, '#bad3e8');
+    const tests = [['Docs.',2], ['Cont.',3], ['Cálculo',2], ['Indic.',1], ['Forn.',3]];
     const barFill = gradient(ctx, 0, 200, 0, 340, [[0,'#67dafa'],[1,'#278acb']]);
     for (let tick = 0; tick < 4; tick++) {
       const y = 325 - tick * 43;
@@ -116,8 +116,8 @@
       text(ctx, label, x + 17, 349, 15, '#d7e9f7', 500, 'center');
     });
     rect(ctx, 419, 124, 1, 232, '#436688');
-    text(ctx, 'Técnicas por custo', 444, 139, 24, '#f4f9ff', 610);
-    const categories = [['1 PT',1,'#ffe39a'], ['2 PT',2,'#58d3dd'], ['3 PT',2,'#61a8f1']];
+    text(ctx, 'Testes por custo', 444, 139, 24, '#f4f9ff', 610);
+    const categories = [['1 crédito',1,'#ffe39a'], ['2 créditos',2,'#58d3dd'], ['3 créditos',2,'#61a8f1']];
     let angle = -Math.PI / 2;
     categories.forEach(([name, count, color], i) => {
       const end = angle + tau * count / 5;
@@ -131,12 +131,12 @@
       text(ctx, name, 657, 225 + i * 32, 17, '#dbedfa');
     });
     text(ctx, '5', 540, 261, 46, '#ffffff', 620, 'center');
-    text(ctx, 'TÉCNICAS', 540, 282, 12, '#a3c8df', 650, 'center');
+    text(ctx, 'TESTES', 540, 282, 12, '#a3c8df', 650, 'center');
     panel(ctx, 27, 373, 715, 40, 5, '#173a5b', '#447394');
     rect(ctx, 43, 386, 4, 14, '#73d2e7');
     text(ctx, 'PLANEJAMENTO', 58, 399, 14, '#9fc6df', 700);
     text(ctx, 'Orçamento inicial', 230, 399, 16, '#d1e2f3');
-    text(ctx, '12 pontos técnicos', 720, 400, 20, '#ffffff', 650, 'right');
+    text(ctx, '8 créditos', 720, 400, 20, '#ffffff', 650, 'right');
   }
   function workstation(ctx) {
     rect(ctx, 0, 0, 496, 279, gradient(ctx, 0, 279, 496, 0, [[0,'#16345c'], [.53,'#214c82'], [1,'#3475af']]));
@@ -149,7 +149,7 @@
     }
     barsLogo(ctx, 203, 49, 92, '#ebf6ff');
     text(ctx, 'Auditoria', 248, 184, 38, '#ffffff', 620, 'center');
-    text(ctx, 'CONTROLES INTERNOS', 248, 210, 15, '#b4d7ed', 640, 'center');
+    text(ctx, 'CONFERÊNCIA DE REGISTROS', 248, 210, 15, '#b4d7ed', 640, 'center');
     rect(ctx, 218, 232, 60, 2, '#72c7de');
   }
   function office(ctx) {
@@ -163,7 +163,7 @@
     ctx.shadowOffsetY = 3;
     barsLogo(ctx, 48, 34, 70, '#2b4966');
     text(ctx, 'Auditoria', 145, 83, 55, '#243f59', 680);
-    text(ctx, 'e Controles Internos', 147, 113, 24, '#354c61', 590);
+    text(ctx, 'e conferência de registros', 147, 113, 24, '#354c61', 590);
     ctx.restore();
   }
   function distribution(ctx) {
@@ -233,8 +233,8 @@
     });
     rect(ctx, 33, 326, 334, 33, '#32536c');
     text(ctx, 'Item / descrição', 42, 348, 14, '#f2f5f5', 640);
-    text(ctx, 'Un.', 258, 348, 14, '#f2f5f5', 640);
-    text(ctx, 'Qtde.', 310, 348, 14, '#f2f5f5', 640);
+    text(ctx, 'Unidade', 258, 348, 14, '#f2f5f5', 640);
+    text(ctx, 'Total', 310, 348, 14, '#f2f5f5', 640);
     for (let i = 0; i < 5; i++) {
       const y = 360 + i * 24;
       if (!(i % 2)) rect(ctx, 33, y, 334, 24, '#e9eae2');
