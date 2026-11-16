@@ -141,3 +141,17 @@ test('tablet fica vertical ao lado da coxa na pose original',()=>{
   const heights=vertices.map(p=>point(rig.tablet,p)[1]);
   assert.ok(Math.min(...heights)>1.05&&Math.max(...heights)<1.75,'o tablet deve ficar abaixo da cintura');
 });
+
+test('ambos os olhos piscam a cada 4 segundos mesmo com a simulação parada',()=>{
+  for(const role of ['auditor','manager','worker'])for(const side of ['L','R']){
+    const blinks=[];let previouslyClosed=false;
+    for(let frame=0;frame<=14*60;frame++){
+      const clock=frame/60,rig=people.pose(0,0,0,false,role,0,false,0,clock);
+      const closed=distance(point(rig['eyelid'+side],[0,2.87,-.17]),point(rig.head,[0,2.87,-.17]))>.020;
+      if(closed&&!previouslyClosed)blinks.push(clock);
+      previouslyClosed=closed;
+    }
+    assert.ok(blinks.length>=3,`${role}, ${side}: ${blinks}`);
+    for(let i=1;i<blinks.length;i++)assert.ok(Math.abs(blinks[i]-blinks[i-1]-4)<.020,`${role}, ${side}: ${blinks}`);
+  }
+});

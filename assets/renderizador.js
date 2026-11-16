@@ -138,9 +138,9 @@
       this.bind(geometry);
       this.gl.drawArrays(this.gl.TRIANGLES,0,geometry.count);
     }
-    drawPerson(x,z,time,walking,role,dir,mouth,walkDistance){
+    drawPerson(x,z,time,walking,role,dir,mouth,walkDistance,blinkClock=time){
       const gl=this.gl, actor=this.actors[role];
-      const pose=SCAIPeople.pose(x,z,time,walking,role,dir,mouth,walkDistance);
+      const pose=SCAIPeople.pose(x,z,time,walking,role,dir,mouth,walkDistance,blinkClock);
       for(let i=0;i<actor.bones.length;i++)this.boneMatrices.set(pose[actor.bones[i]],i*16);
       gl.uniformMatrix4fv(this.uniform['Bones[0]'],false,this.boneMatrices);
       this.bind(actor.geometry);
@@ -148,7 +148,7 @@
       else gl.drawArrays(gl.TRIANGLES,0,actor.geometry.count);
     }
     draw(engine) {
-      const gl=this.gl, p=engine.player, focus=engine.events.isDialogueOpen?.();
+      const gl=this.gl, p=engine.player, focus=engine.events.isDialogueOpen?.(),blinkClock=performance.now()/1000;
       gl.viewport(0,0,gl.drawingBufferWidth,gl.drawingBufferHeight);
       gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
       gl.useProgram(this.program);
@@ -161,9 +161,9 @@
       this.drawGeometry(this.contacts);
       gl.depthMask(true); gl.disable(gl.BLEND);
       gl.uniform1i(this.uniform.Actor,1);
-      if(!focus && engine.cameraScale>=.43)this.drawPerson(p.x,p.z,engine.t,engine.walking,'auditor',p.dir,false,engine.walkDistance);
-      this.drawPerson(-10.7,-5.2,engine.t,false,'manager',Math.PI,!!engine.events.isTalking?.());
-      if(!focus)this.drawPerson(3.3,-2.25,engine.t,false,'worker',.6,false);
+      if(!focus && engine.cameraScale>=.43)this.drawPerson(p.x,p.z,engine.t,engine.walking,'auditor',p.dir,false,engine.walkDistance,blinkClock);
+      this.drawPerson(-10.7,-5.2,engine.t,false,'manager',Math.PI,!!engine.events.isTalking?.(),undefined,blinkClock);
+      if(!focus)this.drawPerson(3.3,-2.25,engine.t,false,'worker',.6,false,undefined,blinkClock);
     }
   }
   window.SCAIRenderer=Renderer;

@@ -10,7 +10,7 @@ Implementação em `codex/teste-nova-implementacao`, baseada na referência de a
 - Cabelo restaurado ao molde compacto da versão anterior, com as mechas largas e a cor castanha originais. Marcos conserva os fios grisalhos e a barba aparada; o operador conserva o capacete e o colete. Pele e cabelo voltaram à paleta e à resposta de iluminação anteriores.
 - Paletó e calças com superfícies contínuas nas articulações, pregas discretas, lapelas com dobra, bolsos, costuras e colarinho ajustado. Sapatos com acabamento de couro e cadarços; cinto com fivela retangular.
 - Mãos reconstruídas como uma única superfície fechada: punho, palma, espaços entre os dedos e polegar compartilham a mesma geometria. As unhas acompanham a superfície dos dedos. O tablet segue verticalmente ao lado da coxa, ligado ao mesmo antebraço; o encaixe foi ajustado para o polegar envolver a borda sem atravessar o painel.
-- Deformação por dois ossos nos cotovelos, joelhos, quadril e pescoço. Mandíbula e lábio acompanham a fala e voltam à boca fechada quando ela termina; as pálpebras piscam durante a animação de repouso.
+- Deformação por dois ossos nos cotovelos, joelhos, quadril e pescoço. Mandíbula e lábio acompanham a fala e voltam à boca fechada quando ela termina; ambos os olhos piscam a cada 4 segundos de tempo real, sem depender da velocidade da simulação.
 - Roupas, acessórios e olhos conservam os materiais do experimento. Pele e cabelo usam o acabamento suave anterior. O cenário mantém a iluminação existente.
 
 ![Elenco renderizado para inspeção dos modelos](previa-elenco.png)
@@ -29,7 +29,7 @@ Foi usado o modo integrado da habilidade `imagegen`. A imagem gerada foi codific
 
 ## Validação
 
-`node --test tests/personagens.test.cjs` verifica 19 casos: integridade das malhas e influências do esqueleto para cada personagem, poses finitas ao girar/caminhar/falar, comprimento preservado do rosto, boca fechada em repouso e animada na fala, continuidade das duas mãos de cada personagem, apoio do pé durante o avanço, solas acima do chão, altura da postura, ancoragem do tablet e sua posição abaixo da cintura. O teste das mãos exige uma única superfície de pele conectada e sem bordas abertas, incluindo todos os dedos e o polegar. Os modelos usam índices de 16 bits no WebGL 1 e um desenho por personagem.
+`node --test tests/personagens.test.cjs` verifica 20 casos: integridade das malhas e influências do esqueleto para cada personagem, poses finitas ao girar/caminhar/falar, comprimento preservado do rosto, boca fechada em repouso e animada na fala, continuidade das duas mãos de cada personagem, apoio do pé durante o avanço, solas acima do chão, altura da postura, ancoragem do tablet, sua posição abaixo da cintura e piscadas de ambos os olhos a cada 4 segundos mesmo com a simulação parada. O teste das mãos exige uma única superfície de pele conectada e sem bordas abertas, incluindo todos os dedos e o polegar. Os modelos usam índices de 16 bits no WebGL 1 e um desenho por personagem.
 
 A fase foi aberta diretamente e pelo menu no Edge com WebGL real. A missão foi percorrida até o resultado aprovado, incluindo entrevista a 30 caracteres por segundo, feedback instantâneo, execução de testes fora do plano e cinco mudanças de plano sem criar créditos. Os três personagens foram conferidos de frente, de perfil e por trás; caminhada, fala e piscada foram renderizadas sem erro de WebGL. O layout móvel foi conferido com emulação, com fonte de 16 px e faixa de diálogo de 25% da altura.
 

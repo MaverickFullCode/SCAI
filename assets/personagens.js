@@ -596,8 +596,8 @@
   const restThighAngle = Math.atan2(.017,hipHeight-kneeHeight);
   const restShinAngle = Math.atan2(-.020,kneeHeight-ankleHeight);
 
-  function pose(x,z,time=0,walking=false,role='auditor',dir=0,mouth=false,walkDistance){
-    const t=time+(role==='manager'?1.3:role==='worker'?2.7:0);
+  function pose(x,z,time=0,walking=false,role='auditor',dir=0,mouth=false,walkDistance,blinkClock=time){
+    const roleOffset=role==='manager'?1.3:role==='worker'?2.7:0,t=time+roleOffset;
     const w=walking?1:0, breath=sin(t*1.65), answer=mouth?1:0;
     const cycle=(walkDistance ?? time*3.6)/strideDistance;
     const phase=cycle*TAU;
@@ -612,7 +612,8 @@
     const teeth=identity();teeth[5]=.005+.995*reveal;teeth[13]=level*(1-teeth[5]);teeth[14]=.009*(1-reveal);
     rig.teeth=multiply(rig.head,teeth);
     for(const side of ['L','R']){
-      const blinkTime=(t+1.8+(side==='R'?.012:0))%5.3;
+      // Use elapsed real time so the simulation's frame cap cannot slow blinking.
+      const blinkTime=(blinkClock+roleOffset+1.8+(side==='R'?.012:0))%4;
       const blink=smooth(0,.075,blinkTime)*(1-smooth(.075,.205,blinkTime));
       rig['eyelid'+side]=multiply(rig.head,transform(0,-.033*blink,-.020*blink));
     }
