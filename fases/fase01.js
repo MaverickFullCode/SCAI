@@ -20,8 +20,54 @@
   const st={stage:'welcome',dialogStep:0,dialogReply:null,interviewScore:0,interviewPath:[],plan:Object.fromEntries(techs.map(t=>[t.id,0])),priority:Object.fromEntries(techs.map(t=>[t.id,t.priority])),executed:Object.fromEntries(techs.map(t=>[t.id,0])),spent:0,budget:12,adjustments:0,adjustmentOpen:false,report:null,modal:false,dialogueOpen:false,speaking:false,result:null};
   const SPEECH_CPS=30;
   let engine=null,near=null,toastTimer=null,speechTimer=null,speechToken=0;
+  const phoneInput=matchMedia('(any-pointer: coarse)');
+  const hudPanels=[['missionCard','missionToggle'],['quickbar','workToggle']];
+  let phoneUi=false,activeHudPanel=null;
+  function syncHudPanels(){
+    for(const [panelId,toggleId] of hudPanels){
+      const open=phoneUi&&activeHudPanel===panelId;
+      $('#'+panelId).hidden=phoneUi&&!open;
+      const toggle=$('#'+toggleId);
+      toggle.setAttribute('aria-expanded',String(open));
+      toggle.setAttribute('aria-label',`${open?'Recolher':'Abrir'} ${panelId==='missionCard'?'missão':'painel de trabalho'}`);
+    }
+  }
+  function closeHudPanels(restoreFocus=false){
+    const previous=activeHudPanel;activeHudPanel=null;syncHudPanels();
+    if(restoreFocus&&previous){
+      const toggle=hudPanels.find(([panel])=>panel===previous)?.[1];
+      if(toggle)$('#'+toggle).focus({preventScroll:true});
+    }
+  }
+  function bindHudPanels(){
+    const updateLayout=()=>{
+      // Embedded browsers may report the host screen; explicit phone/tablet hints take priority.
+      const shortSide=Math.min(screen.width||innerWidth,screen.height||innerHeight);
+      const ua=navigator.userAgent;
+      const tablet=/iPad|Tablet|PlayBook|Silk/i.test(ua)||(/Android/i.test(ua)&&!/Mobile/i.test(ua))||(/Macintosh/i.test(ua)&&navigator.maxTouchPoints>1);
+      const phone=/iPhone|iPod|Windows Phone/i.test(ua)||(/Android/i.test(ua)&&/Mobile/i.test(ua))||navigator.userAgentData?.mobile===true;
+      const next=!tablet&&(phone||(phoneInput.matches&&shortSide<=620));
+      if(next!==phoneUi)activeHudPanel=null;
+      phoneUi=next;$('#game').classList.toggle('phone-ui',phoneUi);syncHudPanels();
+    };
+    document.querySelectorAll('[data-hud-toggle]').forEach(button=>button.addEventListener('click',()=>{
+      if(!phoneUi||st.modal||st.dialogueOpen)return;
+      activeHudPanel=activeHudPanel===button.dataset.hudToggle?null:button.dataset.hudToggle;
+      syncHudPanels();
+    }));
+    document.querySelectorAll('[data-hud-close]').forEach(button=>button.addEventListener('click',()=>closeHudPanels(true)));
+    document.addEventListener('pointerdown',event=>{
+      if(phoneUi&&activeHudPanel&&!event.target.closest?.('#missionCard, #quickbar, #mobilePanelButtons'))closeHudPanels();
+    });
+    document.addEventListener('keydown',event=>{
+      if(event.key==='Escape'&&phoneUi&&activeHudPanel){event.preventDefault();closeHudPanels(true);}
+    });
+    window.addEventListener('resize',updateLayout);
+    phoneInput.addEventListener('change',updateLayout);
+    updateLayout();
+  }
   const inner=html=>`<div class="modal-inner">${html}</div>`;
-  function show(html){$('#modalBody').innerHTML=inner(html);$('#modal').hidden=false;st.modal=true;$('#modalCard')?.scrollTo(0,0);}
+  function show(html){closeHudPanels();$('#modalBody').innerHTML=inner(html);$('#modal').hidden=false;st.modal=true;$('#modalCard')?.scrollTo(0,0);}
   function stopSpeech(){speechToken++;if(speechTimer!==null){clearTimeout(speechTimer);speechTimer=null;}st.speaking=false;}
   function endDialogue(){stopSpeech();st.dialogueOpen=false;$('#dialoguePanel').hidden=true;$('#dialogueChoices').innerHTML='';$('#dialogueContinue').hidden=true;}
   function typeSpeech(text, onComplete) {
@@ -88,7 +134,7 @@
       :st.dialogStep===1&&st.interviewPath[0]===true
         ?'Sua solicitação nos ajudou a localizar registros de contagem e entradas. Há pressão para publicar as demonstrações e os empregados temem impactos na operação. Como conduzirá os próximos passos?'
         :d.s;
-    st.modal=false;$('#modal').hidden=true;st.dialogueOpen=true;$('#dialoguePanel').hidden=false;
+    closeHudPanels();st.modal=false;$('#modal').hidden=true;st.dialogueOpen=true;$('#dialoguePanel').hidden=false;$('#dialoguePanel').scrollTop=0;$('#dialogueChoices').scrollTop=0;
     $('#dialogueSpeaker').textContent='MARCOS · GESTOR OPERACIONAL';$('#dialogueStep').textContent=`ENTREVISTA ${st.dialogStep+1} / ${interview.length}`;
     $('#dialogueChoices').innerHTML='';$('#dialogueContinue').hidden=true;$('#dialogueHint').textContent='Ouça o gestor; as opções aparecem quando a fala terminar.';
     typeSpeech(line,()=>{
@@ -214,11 +260,11 @@
       });
     }
   }
-  function boot(){try{engine=new SCAI3D.Engine($('#scene'),{isBlocked:()=>st.modal||st.dialogueOpen,isTalking:()=>st.speaking,isDialogueOpen:()=>st.dialogueOpen,onInteract:()=>{if(!st.modal&&!st.dialogueOpen)interact(near)},onFrame:(e)=>{refreshTimer++;if(refreshTimer%6===0)updateNearbyAction()}});}
+  function boot(){bindHudPanels();try{engine=new SCAI3D.Engine($('#scene'),{isBlocked:()=>st.modal||st.dialogueOpen,isTalking:()=>st.speaking,isDialogueOpen:()=>st.dialogueOpen,onInteract:()=>{if(!st.modal&&!st.dialogueOpen)interact(near)},onFrame:(e)=>{refreshTimer++;if(refreshTimer%6===0)updateNearbyAction()}});}
     catch(e){console.error(e);$('#fallback').hidden=false;$('#fallback').style.display='grid';return;}
     $('#quality').onclick=()=>{engine.setEco(!engine.low);$('#quality').textContent=engine.low?'⚙ Eco ✓':'⚙ Eco';note(engine.low?'Modo econômico: resolução reduzida e até 30 FPS.':'Qualidade padrão ativada.')};
     $('#exit').onclick=()=>{if(window.parent!==window){parent.postMessage({type:'scai:exit'},'*')}else location.href='../SCAI.html'};
-    $('#actionBtn').onclick=()=>interact(near);$('#routeBtn').onclick=guide;$('#reportBtn').onclick=reportModal;$('#modalClose').onclick=()=>{hide();if(st.stage==='welcome')setStage('interview')};
+    $('#actionBtn').onclick=()=>interact(near);$('#routeBtn').onclick=()=>{closeHudPanels();guide();};$('#reportBtn').onclick=reportModal;$('#modalClose').onclick=()=>{hide();if(st.stage==='welcome')setStage('interview')};
     bindTouchControls();
     document.addEventListener('keydown',e=>{if(e.key==='Escape'&&st.modal&&st.stage!=='result')hide();});
     intro();}

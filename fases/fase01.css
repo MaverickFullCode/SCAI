@@ -51,6 +51,7 @@ button:disabled { cursor: not-allowed; }
 .small-btn { min-width: 33px; height: 33px; border: 0; border-radius: 4px; padding: 0 9px; color: #eef1f3; background: transparent; font-weight: 550; font-size: 12px; }
 .small-btn:hover, .small-btn:focus-visible { background: #38546e; }
 #exit { font-size: 20px; padding: 0 5px; }
+#mobilePanelButtons, .panel-close, .panel-collapse { display: none; }
 #missionCard, #quickbar { position: absolute; z-index: 3; top: calc(var(--hud-top) + 54px); padding: 12px 14px; }
 #missionCard { left: var(--screen-edge); width: min(275px, 30vw); border-left: 3px solid #d3aa6e; pointer-events: none; }
 .eyebrow { color: var(--gold); font-size: 9px; font-weight: 700; letter-spacing: .12em; }
@@ -65,10 +66,10 @@ button:disabled { cursor: not-allowed; }
 .route { display: block; width: 100%; margin-top: 8px; padding: 8px 9px; border: 1px solid #8299ac; border-radius: 4px; background: #2c4969; color: #f5f7f9; text-align: left; font-size: 12px; font-weight: 600; }
 .route:hover, .route:focus-visible { background: #3d5d7c; }
 .route.secondary { color: #ffe3ab; border-color: #ac8f62; background: #293b4c; }
-#quickbar:has(#reportBtn[hidden]) { width: auto; padding: 0; }
-#quickbar:has(#reportBtn[hidden]) > :is(.eyebrow, #quickContent) { display: none; }
-#quickbar:has(#reportBtn[hidden]) .route { margin: 0; background: transparent; border: 0; padding: 10px 12px; }
-#quickbar:has(#reportBtn[hidden]) .route:hover { background: #334e6a; }
+#game:not(.phone-ui) #quickbar:has(#reportBtn[hidden]) { width: auto; padding: 0; }
+#game:not(.phone-ui) #quickbar:has(#reportBtn[hidden]) > :is(.eyebrow, #quickContent) { display: none; }
+#game:not(.phone-ui) #quickbar:has(#reportBtn[hidden]) .route { margin: 0; background: transparent; border: 0; padding: 10px 12px; }
+#game:not(.phone-ui) #quickbar:has(#reportBtn[hidden]) .route:hover { background: #334e6a; }
 .location, #controlHelp { position: absolute; z-index: 2; bottom: max(13px, env(safe-area-inset-bottom)); padding: 6px 10px; font-size: 11px; pointer-events: none; }
 .location { left: var(--screen-edge); color: #fff1d6; font-weight: 600; }
 #controlHelp { right: var(--screen-edge); color: #f3ecd9; font-weight: 650; }
@@ -96,7 +97,7 @@ button:disabled { cursor: not-allowed; }
 .dialogue-choice strong { margin-right: 6px; color: var(--gold); font-weight: 700; }
 .dialogue-choice:hover, .dialogue-choice:focus-visible { border-color: var(--gold); background: #354e66; }
 .dialogue-footer { margin-top: 5px; min-height: 17px; color: #bccddc; font-size: 11px; }
-#game:has(.dialogue-panel:not([hidden])) :is(#missionCard, #quickbar, #action, #location, #controlHelp, #touchControls, #toast, .stagebar, .brand, .chip) { display: none; }
+#game:has(.dialogue-panel:not([hidden])) :is(#missionCard, #quickbar, #mobilePanelButtons, #action, #location, #controlHelp, #touchControls, #toast, .stagebar, .brand, .chip) { display: none; }
 #game:has(.dialogue-panel:not([hidden])) #topHud { justify-content: flex-end; }
 #game:has(#modal:not([hidden])) :is(#missionCard, #quickbar, #action, #location, #controlHelp, #touchControls, #topHud) { visibility: hidden; }
 
@@ -178,7 +179,7 @@ button:disabled { cursor: not-allowed; }
   #missionCard .eyebrow { font-size: 8px; }
   #quickbar { width: calc(42% - 7px); }
   #quickContent { font-size: 11px; }
-  .route, #quickbar:has(#reportBtn[hidden]) .route { font-size: 11px; padding: 8px; }
+  .route, #game:not(.phone-ui) #quickbar:has(#reportBtn[hidden]) .route { font-size: 11px; padding: 8px; }
   .action { bottom: 99px; }
   #game:has(.action.visible) #location { visibility: hidden; }
   .dialogue-panel { padding: 6px max(10px, env(safe-area-inset-left)) max(7px, env(safe-area-inset-bottom)); }
@@ -199,6 +200,37 @@ button:disabled { cursor: not-allowed; }
   #touchControls button { height: 35px; width: 38px; }
   #location, .action { bottom: 86px; }
   .modalCard { max-height: 98%; }
+}
+#game.phone-ui #topHud { display: grid; grid-template-columns: auto 1fr; gap: 6px; }
+#game.phone-ui .brand { grid-column: 1; grid-row: 1; }
+#game.phone-ui .stagebar { display: none; }
+#game.phone-ui .rightTop { grid-column: 2; grid-row: 1; justify-self: end; }
+#game.phone-ui #mobilePanelButtons { grid-column: 1 / -1; grid-row: 2; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; pointer-events: auto; }
+#mobilePanelButtons button { min-height: 38px; border: 1px solid var(--edge); border-radius: 6px; padding: 7px 12px; color: var(--ink); background: var(--panel); box-shadow: var(--shadow); font-size: 12px; font-weight: 650; }
+#mobilePanelButtons button span { margin-right: 5px; color: var(--gold); }
+#mobilePanelButtons button[aria-expanded="true"] { border-color: var(--gold); background: #304d68; }
+#game.phone-ui :is(#missionCard, #quickbar) { z-index: 7; top: calc(var(--hud-top) + 92px); left: var(--screen-edge); right: var(--screen-edge); width: auto; padding: 13px 14px; max-height: min(46%, calc(100% - var(--hud-top) - 224px)); overflow-y: auto; overscroll-behavior: contain; pointer-events: auto; }
+#game.phone-ui :is(#missionCard, #quickbar) > .eyebrow { display: block; max-width: calc(100% - 36px); min-height: 24px; padding-top: 3px; font-size: 9px; }
+#game.phone-ui #objectiveTitle { font-size: 17px; }
+#game.phone-ui :is(#objectiveText, #quickContent) { font-size: 13px; }
+#game.phone-ui .route { min-height: 38px; font-size: 13px; }
+#game.phone-ui .panel-close { position: absolute; top: 7px; right: 8px; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--edge); border-radius: 4px; color: var(--ink); background: #314b64; font-size: 22px; line-height: 1; }
+#game.phone-ui .panel-collapse { display: block; width: 100%; min-height: 36px; margin-top: 10px; padding: 7px 10px; border: 1px solid var(--edge); border-radius: 4px; color: var(--gold); background: transparent; font-size: 12px; font-weight: 600; }
+#game.phone-ui .dialogue-panel { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; gap: 4px; height: 50%; max-height: 50%; overflow: hidden; padding: 5px max(10px, env(safe-area-inset-left)) max(6px, env(safe-area-inset-bottom)); }
+#game.phone-ui .dialogue-heading { min-height: 15px; font-size: 9px; }
+#game.phone-ui .dialogue-heading span:last-child { font-size: 9px; }
+#game.phone-ui :is(.dialogue-text, .dialogue-choice) { line-height: 1.25; }
+#game.phone-ui .dialogue-text { margin: 0; }
+#game.phone-ui .dialogue-choices { grid-template-columns: 1fr; gap: 4px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; align-content: start; }
+#game.phone-ui .dialogue-choice { padding: 4px 8px; }
+#game.phone-ui .dialogue-footer { margin-top: 0; min-height: 15px; font-size: 10px; }
+@media (max-height: 500px) and (orientation: landscape) {
+  #game.phone-ui .dialogue-panel { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); grid-template-rows: auto minmax(0, 1fr) auto; column-gap: 12px; }
+  #game.phone-ui .dialogue-heading { grid-column: 1 / -1; }
+  #game.phone-ui .dialogue-text { grid-column: 1; grid-row: 2; min-height: 0; overflow-y: auto; }
+  #game.phone-ui .dialogue-choices { grid-column: 2; grid-row: 2; gap: 3px; }
+  #game.phone-ui .dialogue-choice { padding: 2px 8px; }
+  #game.phone-ui .dialogue-footer { grid-column: 1 / -1; grid-row: 3; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; }

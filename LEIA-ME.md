@@ -1,6 +1,8 @@
-# SCAI • Protótipo Alpha
+# SCAI • Versão Alfa 0.2
 
 Leia também [MEMORIA-DO-PROJETO.md](MEMORIA-DO-PROJETO.md) para o registro permanente da conversa de origem, metodologia e decisões visuais.
+
+Veja [os personagens da Versão Alfa 0.2](docs/personagens-realistas.md), aprovada e integrada à `main`, com capturas reais, materiais e validação. Os três modelos receberam rosto, cabelo, alfaiataria, mãos e materiais novos, com deformação das articulações na GPU. Para conferir os testes de geometria, animação e câmera, execute `node --test tests/personagens.test.cjs tests/camera.test.cjs`.
 
 **Entrada:** abrir `SCAI.html` no Chrome, Edge ou Firefox moderno. O jogo também pode ser servido por qualquer servidor estático (recomendado para distribuição), por exemplo `python -m http.server 8000` dentro da pasta SCAI e então acessar `http://localhost:8000/SCAI.html`.
 
@@ -20,11 +22,13 @@ Leia também [MEMORIA-DO-PROJETO.md](MEMORIA-DO-PROJETO.md) para o registro perm
 
 ## Controles
 
+No celular, os botões **Missão** e **Trabalho** abrem os respectivos painéis do topo, que começam recolhidos. Use ×, **Recolher** ou toque novamente no botão para fechá-los. A pergunta fica fixa durante a escolha das respostas. Veja as capturas e a validação em [Interface em celulares](docs/interface-celular.md).
+
 **Computador:** WASD ou ↑↓ para caminhar, ←→ ou arrastar com mouse para girar câmera, E para interagir. **Celular/tablet:** botões direcionais, botões de câmera, arrastar o dedo na cena e botão Interagir. O botão **Localizar objetivo** procura um teste pendente e acessível pelo saldo, gira o auditor e a câmera em sua direção e indica os pontos com marcadores 3D baixos, fixos ao piso (laranja pendente e verde concluído); não teletransporta o personagem.
 
 ## Conteúdo funcional no alfa
 
-1. Tutorial introdutório; salas e galpão exploráveis em 3D, agora com teto alto completo, painéis acústicos, estrutura de suporte e luminárias; auditor controlável, gestor e funcionário, com personagens arredondados, rostos e vestuário detalhados em geometria leve. A câmera testa a trajetória até o personagem e se aproxima automaticamente junto a paredes e objetos, sem atravessar os limites do cenário; o auditor também colide com paredes, móveis, cadeiras, estantes, paletes, bancadas e equipamentos; se ficar muito perto, oculta o auditor para não bloquear a visão. Na entrevista, uma faixa inferior ocupa 25% da tela, a fala do gestor aparece a 30 caracteres por segundo e o feedback pedagógico surge instantaneamente; a boca se anima apenas durante a fala do gestor. As opções surgem quando a fala termina e usam fonte de 16 px, igual à fala. O enquadramento aproxima o gestor e oculta temporariamente o auditor para deixar o rosto livre; a câmera retorna ao encerrar a conversa.
+1. Tutorial introdutório; salas e galpão exploráveis em 3D, agora com teto alto completo, painéis acústicos, estrutura de suporte e luminárias; auditor controlável, gestor e funcionário, com personagens arredondados, rostos e vestuário detalhados em geometria leve. A câmera se aproxima somente para evitar paredes e divisórias; apenas quando essa aproximação fica muito curta, oculta o auditor. Móveis e outros personagens não provocam zoom: ficam invisíveis enquanto a câmera os atravessa e reaparecem ao sair. A caminhada do auditor continua bloqueada por paredes, móveis, cadeiras, estantes, paletes, bancadas, equipamentos e pessoas. Veja [a revisão da câmera e do polegar](docs/camera-e-polegar.md). Na entrevista, uma faixa inferior ocupa 50% da tela em celulares e 25% em tablets/computadores, a fala do gestor aparece a 30 caracteres por segundo e o feedback pedagógico surge instantaneamente; a boca se anima apenas durante a fala do gestor. As opções surgem quando a fala termina e usam fonte de 16 px, igual à fala. O enquadramento aproxima o gestor e oculta temporariamente o auditor para deixar o rosto livre; a câmera retorna ao encerrar a conversa.
 2. Duas perguntas de entrevista com escolhas alternativas e feedback imediato.
 3. Gestão de risco com cinco técnicas, metas e prioridades, orçamento de 12 pontos técnicos e plano não obrigatório na quantidade.
 4. Execução no ambiente 3D: testes planejados ou fora da meta podem ser executados se houver saldo; cada teste consome seus próprios pontos e uma execução fora da meta registra +1 mudança de plano, sem conceder créditos; constatações registradas.
@@ -42,4 +46,4 @@ Leia também [MEMORIA-DO-PROJETO.md](MEMORIA-DO-PROJETO.md) para o registro perm
 
 ## Conferência do upgrade visual
 
-A missão foi percorrida até o resultado no Microsoft Edge, com abertura pelo menu e diretamente pelo arquivo da fase. Foram conferidos entrevista, feedback instantâneo, metas e saldo, mudanças de plano sucessivas, marcadores e relatório. A cena rodou a aproximadamente 60 FPS a 1180 × 756 em Intel UHD Graphics neste computador. O layout foi conferido em viewport de 390 × 844 com perguntas e respostas em 16 px e diálogo ocupando 25% da altura. O desempenho em um celular físico ainda requer conferência.
+A missão foi percorrida até o resultado no Microsoft Edge, com abertura pelo menu e diretamente pelo arquivo da fase. Foram conferidos entrevista, feedback instantâneo, metas e saldo, mudanças de plano sucessivas, marcadores e relatório. A cena rodou a aproximadamente 60 FPS a 1180 × 756 em Intel UHD Graphics neste computador. O layout foi conferido em viewport de 390 × 844 com perguntas e respostas em 16 px e diálogo ocupando 50% da altura; tablets e computadores mantêm 25%. O desempenho em um celular físico ainda requer conferência.
