@@ -615,8 +615,9 @@
     const phase=cycle*TAU;
     const root=transform(x,seatDrop?-seatDrop:0,z,0,dir),rig={};
     rig.body=joint(multiply(root,transform(0,.003*breath,0)),[0,1.66,0],0,-sin(phase)*.055*w,cos(phase)*.013*w);
-    if(seated)rig.body=joint(rig.body,[0,hipHeight,.007],.10*sin(Math.PI*seated));
-    rig.head=joint(rig.body,[0,2.58,0],lerp(lerp(-.013*breath+.018*sin(t*5)*answer,-.14,working),-.42522,reading),lerp(.029*sin(t*.66)+.033*sin(t*2.5)*answer,.86646,reading),.006*sin(t*.94)*(1-reading));
+    const bodyTilt=.10*sin(Math.PI*seated)-.36*working;
+    if(seated)rig.body=joint(rig.body,[0,hipHeight,.007],bodyTilt);
+    rig.head=joint(rig.body,[0,2.58,0],lerp(lerp(-.013*breath+.018*sin(t*5)*answer,-.56,working),-.42522,reading),lerp(lerp(.029*sin(t*.66)+.033*sin(t*2.5)*answer,-.08,working),.86646,reading),.006*sin(t*.94)*(1-reading)*(1-working));
     const vis=answer*(.4+.33*sin(t*19)+.20*sin(t*29+1)+.07*sin(t*42)),op=Math.max(0,vis);
     rig.jaw=joint(rig.head,[0,headHeight(2.785,role),.028],-.088*op);
     const reveal=smooth(.025,.18,op),level=headHeight(mouthHeight,role);
@@ -701,17 +702,32 @@
       if(tableHand){
         // Shoulder and elbow carry the wrist towards the table before the hand
         // pronates. The skin stays attached through the forearm/wrist blend.
-        armAngle=lerp(armAngle,working?.36:.26,seated);
-        foreAngle=lerp(foreAngle,working?.12+.006*sin(t*1.1+s):.415,seated);
+        if(working){
+          // Solve the arm towards a fixed support point on the inspection bench.
+          // Undo the torso lean and breathing before solving in shoulder space.
+          // .0715 is the palm/finger support offset below the posed wrist.
+          const targetY=(.755+.05)*1.52+.0715+seatDrop-.003*breath-hipHeight,targetZ=-.68-.007;
+          const dy=hipHeight+cos(bodyTilt)*targetY+sin(bodyTilt)*targetZ-2.411;
+          const dz=.007-sin(bodyTilt)*targetY+cos(bodyTilt)*targetZ-.016;
+          const upper=Math.hypot(.4,.011),lower=Math.hypot(.416,.060);
+          const flex=Math.acos(clamp((dy*dy+dz*dz-upper*upper-lower*lower)/(2*upper*lower),-1,1));
+          const upperRest=Math.atan2(.011,.4),lowerRest=Math.atan2(.060,.416);
+          const reach=Math.atan2(-dz,-dy)-Math.atan2(lower*sin(flex),upper+lower*cos(flex));
+          armAngle=lerp(armAngle,reach-upperRest,seated);
+          foreAngle=lerp(foreAngle,flex+upperRest-lowerRest,seated);
+        }else{
+          armAngle=lerp(armAngle,.26,seated);
+          foreAngle=lerp(foreAngle,.415,seated);
+        }
       }
       if(carry&&reading){armAngle=lerp(armAngle,.25,reading);foreAngle=lerp(foreAngle,2.0,reading);}
-      const armRoll=-s*(.015+.019*gesture+(carry?.27:.04)*seated);
-      rig['arm'+side]=joint(rig.body,[s*.356,2.411,.016],armAngle,.007*breath,carry?lerp(armRoll,.30,reading):armRoll);
+      const armRoll=-s*(.015+.019*gesture+(carry?.27:.04)*seated)*(1-working);
+      rig['arm'+side]=joint(rig.body,[s*.356,2.411,.016],armAngle,.007*breath*(1-working),carry?lerp(armRoll,.30,reading):armRoll);
       rig['fore'+side]=joint(rig['arm'+side],[s*.429,2.011,.005],foreAngle);
       rig['hand'+side]=rig['fore'+side];
       if(tableHand){
         const wrist=[s*.456,1.595,-.055];
-        rig['hand'+side]=joint(rig['fore'+side],wrist,(Math.PI/2-.15-armAngle-foreAngle)*seated);
+        rig['hand'+side]=joint(rig['fore'+side],wrist,(Math.PI/2-.15-armAngle-foreAngle-bodyTilt*working)*seated);
         rig['hand'+side]=joint(rig['hand'+side],wrist,0,-s*Math.PI/2*seated);
       }
       if(carry){

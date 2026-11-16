@@ -87,15 +87,22 @@ test('estar sentado suprime o ciclo de caminhada mesmo com comando mantido',()=>
   for(const bone of people.bones)assert.deepEqual(Array.from(idle[bone]),Array.from(walking[bone]));
 });
 
-test('funcionário sentado mantém os pés no piso e as duas mãos sobre a borda da bancada',()=>{
+test('funcionário se inclina para ler o caderno e mantém as mãos apoiadas sem atravessar o tampo',()=>{
   const model=people.build('worker'),tableTop=(.755+.05)*1.52;
   for(const time of [0,1.5,3,5,8,11]){
     const rig=people.pose(0,0,time,false,'worker',0,false,undefined,time,1);
+    const eye=point(rig.head,[0,2.87,-.155]),target=[-.1,1.28,-1.285];
+    const toNotebook=target.map((v,i)=>v-eye[i]),gaze=[-rig.head[8],-rig.head[9],-rig.head[10]];
+    const alignment=toNotebook.reduce((sum,v,i)=>sum+v*gaze[i],0)/Math.hypot(...toNotebook);
+    assert.ok(alignment>.995,'o olhar deve apontar para o caderno');
+    const neckAlignment=[8,9,10].reduce((sum,i)=>sum+rig.body[i]*rig.head[i],0);
+    assert.ok(Math.acos(neckAlignment)<.62,'o pescoço deve manter uma inclinação moderada em relação ao tronco');
+    assert.ok(point(rig.body,[0,2.411,.016])[2]<-.28,'o tronco se inclina à frente');
     for(const side of ['L','R']){
       const hand=vertices(model,rig,name=>name==='hand'+side),feet=vertices(model,rig,name=>name==='foot'+side);
-      const bottom=Math.min(...hand.map(p=>p[1]));
-      assert.ok(bottom>tableTop&&bottom<tableTop+.06,'mão pouco acima do tampo, sem atravessá-lo');
-      assert.ok(Math.min(...hand.map(p=>p[2]))<-.60,'dedos alcançam a borda da bancada');
+      const onTable=hand.filter(p=>p[2]<-.585),bottom=Math.min(...onTable.map(p=>p[1]));
+      assert.ok(bottom>=tableTop&&bottom<tableTop+.002,'a mão deve tocar o tampo sem ficar suspensa ou atravessá-lo');
+      assert.ok(Math.min(...hand.map(p=>p[2]))<-.90,'dedos alcançam a área ao lado do caderno');
       assert.ok(Math.abs(Math.min(...feet.map(p=>p[1]))-.012)<.00001);
       assert.ok(distance(point(rig['hand'+side],[side==='L'?-.456:.456,1.595,-.055]),point(rig['fore'+side],[side==='L'?-.456:.456,1.595,-.055]))<1e-6);
     }
