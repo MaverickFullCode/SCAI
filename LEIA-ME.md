@@ -1,4 +1,4 @@
-# SCAI • Versão Alfa 0.2
+# SCAI • Versão Alfa 0.3
 
 Leia também [MEMORIA-DO-PROJETO.md](MEMORIA-DO-PROJETO.md) para o registro permanente da conversa de origem, metodologia e decisões visuais.
 
