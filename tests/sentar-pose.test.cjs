@@ -60,7 +60,7 @@ test('pose sentada dobra os joelhos para a frente e repousa a calça sobre a alm
       const knee=point(rig['thigh'+side],[s*.165,.821,-.010]);
       const ankle=point(rig['shin'+side],[s*.166,.195,.010]);
       assert.ok(knee[2]<hip[2]-.45,'o joelho deve avançar à frente do assento');
-      assert.ok(ankle[2]<-.58&&Math.abs(ankle[1]-.195)<.00001);
+      assert.ok(ankle[2]<-.42&&Math.abs(ankle[1]-.195)<.00001);
       const thigh=knee.map((v,i)=>v-hip[i]),shin=ankle.map((v,i)=>v-knee[i]);
       const angle=Math.acos(thigh.reduce((sum,v,i)=>sum+v*shin[i],0)/(Math.hypot(...thigh)*Math.hypot(...shin)));
       assert.ok(angle>.7&&angle<1.8,'o joelho deve estar flexionado');
@@ -85,4 +85,58 @@ test('tablet acompanha a mão e fica fora do apoio lateral da cadeira',()=>{
 test('estar sentado suprime o ciclo de caminhada mesmo com comando mantido',()=>{
   const idle=pose(1,.5,0,false),walking=pose(1,.5,0,true);
   for(const bone of people.bones)assert.deepEqual(Array.from(idle[bone]),Array.from(walking[bone]));
+});
+
+test('mão esquerda repousa sobre a borda da mesa com palma voltada para baixo',()=>{
+  const model=people.build('auditor');
+  for(const time of [.2,2.3,4.4,6.5,8.6]){
+    const rig=pose(1,time),hand=vertices(model,rig,name=>name==='handL');
+    const overTable=hand.filter(p=>p[2]<-.51);
+    assert.ok(overTable.length>20,'os dedos devem alcançar a borda da mesa');
+    const bottom=Math.min(...overTable.map(p=>p[1]));
+    assert.ok(bottom>1.295&&bottom<1.325,`pele sobre a mesa: ${bottom}`);
+    assert.ok(Math.min(...hand.map(p=>p[2]))<-.62&&Math.min(...hand.map(p=>p[2]))>-.68,'os dedos também devem alcançar a mesa individual a -.605');
+    assert.ok(rig.handL[1]<-.97,'a normal da palma deve apontar para baixo');
+  }
+});
+
+test('a mão esquerda alcança a mesa sem atravessá-la ou se separar da manga',()=>{
+  const model=people.build('auditor'),wrist=[-.456,1.595,-.055],elbow=[-.429,2.011,.005];
+  for(const time of [.4,3.7,7.1])for(let i=0;i<=40;i++){
+    const rig=pose(i/40,time),hand=vertices(model,rig,name=>name==='handL');
+    for(const p of hand)if(p[2]<-.51)assert.ok(p[1]>1.29,'a pele não pode atravessar a mesa');
+    assert.ok(distance(point(rig.handL,wrist),point(rig.foreL,wrist))<1e-6,'o punho deve continuar ligado ao antebraço');
+    assert.ok(distance(point(rig.foreL,elbow),point(rig.armL,elbow))<1e-6,'o cotovelo deve continuar ligado à manga');
+  }
+});
+
+test('deslocamento para dentro da cadeira mantém a mão acima da mesa durante toda a transição',()=>{
+  const model=people.build('auditor');
+  // The motor moves from .44 in front of the chair to .035. The nearest
+  // meeting-table edge is .47 from the chair (the individual desks are .64).
+  for(const time of [0,.5,1.5,3.5,5.5,7.5,10])for(let i=0;i<=40;i++){
+    const blend=i/40,offset=.44-.405*blend,rig=pose(blend,time);
+    const hand=vertices(model,rig,name=>name==='handL');
+    for(const p of hand)if(p[2]-offset<-.47){
+      assert.ok(p[1]>1.29,`mão sobre a mesa, tempo ${time}, blend ${blend}: ${p[1]}`);
+    }
+  }
+});
+
+test('bicos dos sapatos não atravessam a base real dos pedestais nas cadeiras externas',()=>{
+  const model=people.build('auditor');
+  const bases=[
+    {min:[-.1955,.0236,-1.84],max:[.1955,.1832,-.82]},
+    {min:[-.1955,.0236,-1.88],max:[.1955,.1832,-.86]}
+  ];
+  for(let i=0;i<=100;i++){
+    const blend=i/100,frontOffset=.44-.405*blend;
+    const feet=vertices(model,pose(blend),name=>name==='footL'||name==='footR');
+    for(const foot of feet)for(const base of bases){
+      const p=[foot[0],foot[1],foot[2]-frontOffset];
+      const inside=p.every((v,axis)=>v>base.min[axis]&&v<base.max[axis]);
+      assert.equal(inside,false,`sapato dentro da base, blend ${blend}: ${p}`);
+      assert.ok(p[2]>base.max[2]+.03,'todo o sapato deve guardar folga frontal de .03 da base');
+    }
+  }
 });

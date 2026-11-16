@@ -626,7 +626,8 @@
         if(seated){
           // Two-bone IK lowers the pelvis into the cushion while the soles stay
           // planted. The same blend runs backwards when getting out of the chair.
-          footZ=-.61*seated;footRoll=0;
+          // Keep the toes clear of the meeting table's low pedestal base.
+          footZ=-.45*seated;footRoll=0;
         } else if (progress < stanceFraction) {
           // A planted foot moves rearward relative to the body at the exact travel speed.
           footZ=-halfStep+strideDistance*progress;
@@ -680,9 +681,23 @@
       const carry=role==='auditor'&&s===1;
       // Keep the folio outside the chair's armrest. The free forearm folds
       // naturally over the lap; hand, fingers and tablet share the same rig.
-      rig['arm'+side]=joint(rig.body,[s*.356,2.411,.016],-.017-w*swing*(carry?.19:.39)+.07*gesture+.04*seated,.007*breath,-s*(.015+.019*gesture+(carry?.27:.04)*seated));
-      rig['fore'+side]=joint(rig['arm'+side],[s*.429,2.011,.005],(carry?.30:.08)+(carry?.05:.78)*seated+w*(.12+.10*Math.max(0,-swing))+.35*gesture+s*.018*breath);
+      let armAngle=-.017-w*swing*(carry?.19:.39)+.07*gesture+.04*seated;
+      let foreAngle=(carry?.30:.08)+(carry?.05:.78)*seated+w*(.12+.10*Math.max(0,-swing))+.35*gesture+s*.018*breath;
+      const tableHand=role==='auditor'&&s<0&&seated>0;
+      if(tableHand){
+        // Shoulder and elbow carry the wrist towards the table before the hand
+        // pronates. The skin stays attached through the forearm/wrist blend.
+        armAngle=lerp(armAngle,.26,seated);
+        foreAngle=lerp(foreAngle,.415,seated);
+      }
+      rig['arm'+side]=joint(rig.body,[s*.356,2.411,.016],armAngle,.007*breath,-s*(.015+.019*gesture+(carry?.27:.04)*seated));
+      rig['fore'+side]=joint(rig['arm'+side],[s*.429,2.011,.005],foreAngle);
       rig['hand'+side]=rig['fore'+side];
+      if(tableHand){
+        const wrist=[s*.456,1.595,-.055];
+        rig['hand'+side]=joint(rig['fore'+side],wrist,(Math.PI/2-.15-armAngle-foreAngle)*seated);
+        rig['hand'+side]=joint(rig['hand'+side],wrist,0,Math.PI/2*seated);
+      }
       if(carry)rig.tablet=rig['hand'+side];
     }
     return rig;

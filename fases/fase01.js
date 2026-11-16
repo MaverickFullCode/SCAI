@@ -211,7 +211,10 @@
     $('#retryMission').onclick=()=>location.reload();
   }
   function updateNearbyAction(){if(!engine)return;const spots=relevantSpots();const nearby=spots.map(h=>({...h,dist:engine.distance(h.x,h.z)})).sort((a,b)=>a.dist-b.dist);near=nearby[0]||null;
-    const blocked=st.modal||st.dialogueOpen,physical=blocked?null:engine.physicalAction?.();
+    const blocked=st.modal||st.dialogueOpen;
+    let physical=blocked?null:engine.physicalAction?.();
+    if(physical&&engine.seating?.phase==='aligning')physical={...physical,label:'Posicionando…',hint:'Aguarde o auditor se posicionar para sentar.',disabled:true};
+    if(physical&&engine.seating?.phase==='leaving')physical={...physical,label:'Saindo…',hint:'Aguarde o auditor se afastar da cadeira.',disabled:true};
     $('#actionBtn').disabled=!!engine.seating;$('#reportBtn').disabled=!!engine.seating;
     $('#action').classList.toggle('visible',!blocked&&!engine.seating&&!!near&&near.dist<=2.85);
     if(near){$('#actionTitle').textContent=near.name;$('#actionSubtitle').textContent=st.stage==='interview'?'Pressione Q para conversar':'Pressione Q para executar se houver saldo';}

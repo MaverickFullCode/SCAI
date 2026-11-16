@@ -22,7 +22,7 @@ Veja [os personagens da Versão Alfa 0.2](docs/personagens-realistas.md), aprova
 
 ## Controles
 
-Na ramificação de testes, **Q** aciona as conversas e procedimentos da missão. **E** usa cadeiras e a porta dupla entre o escritório e o galpão. Os botões de ação também funcionam por toque. Ao sentar, o auditor fica ancorado à cadeira; pressione E novamente para levantar. A câmera continua livre.
+Na ramificação de testes, **Q** aciona as conversas e procedimentos da missão. **E** usa cadeiras e a porta dupla entre o escritório e o galpão. Os botões de ação também funcionam por toque. Ao sentar, o auditor fica ancorado à cadeira; pressione E novamente para levantar. A câmera continua livre. Veja [cadeiras e porta de vidro](docs/cadeiras-e-porta.md) para os controles, capturas e validação.
 
 No celular, os botões **Missão** e **Trabalho** abrem os respectivos painéis do topo, que começam recolhidos. Use ×, **Recolher** ou toque novamente no botão para fechá-los. A pergunta fica fixa durante a escolha das respostas. Veja as capturas e a validação em [Interface em celulares](docs/interface-celular.md).
 

@@ -21,11 +21,12 @@
       this.cameraObjects=mesh.cameraObjects;
       this.hiddenObjects=new Set();
       this.hiddenActors=new Set();
+      this.hiddenDoorParts=new Set();
       this.shadow=SCAILighting.makeShadowMap(gl,this.world.buffer,mesh.propsStart,this.world.count);
       this.contacts=this.makeContacts(mesh.shadows);
       if(window.SCAIDoor){
         const door=SCAIDoor.build();
-        this.door={fixed:this.buffer(door.fixed.v,12),leaves:door.leaves.map(leaf=>({side:leaf.side,opaque:this.buffer(leaf.opaque.v,12),glass:this.buffer(leaf.glass.v,12)}))};
+        this.door={fixed:this.buffer(door.fixed.v,12),frameParts:door.frameParts,leaves:door.leaves.map(leaf=>({id:leaf.id,side:leaf.side,bounds:leaf.bounds,opaque:this.buffer(leaf.opaque.v,12),glass:this.buffer(leaf.glass.v,12)}))};
       }
       this.actors={};
       for(const role of ['auditor','manager','worker']){
@@ -187,11 +188,36 @@
       if(actor.geometry.indexBuffer)gl.drawElements(gl.TRIANGLES,actor.geometry.count,actor.geometry.indexType,0);
       else gl.drawArrays(gl.TRIANGLES,0,actor.geometry.count);
     }
+    updateDoorVisibility(engine){
+      if(!this.door)return;
+      const open=engine.door?.open||0,hidden=this.hiddenDoorParts;
+      const update=(id,bounds)=>{
+        if(engine.cameraOverlaps(bounds,hidden.has(id)?.06:0))hidden.add(id);
+        else hidden.delete(id);
+      };
+      for(const part of this.door.frameParts)update(part.id,part);
+      for(const leaf of this.door.leaves){
+        const offset=leaf.side*2.55*open;
+        update(leaf.id,{min:leaf.bounds.min.map((v,i)=>v+(i===2?offset:0)),max:leaf.bounds.max.map((v,i)=>v+(i===2?offset:0))});
+      }
+    }
+    drawDoorFrame(){
+      const parts=this.door.frameParts.filter(part=>this.hiddenDoorParts.has(part.id));
+      if(!parts.length){this.drawGeometry(this.door.fixed);return;}
+      this.bind(this.door.fixed);
+      let first=0;
+      for(const part of parts){
+        if(part.first>first)this.gl.drawArrays(this.gl.TRIANGLES,first,part.first-first);
+        first=part.first+part.count;
+      }
+      if(first<this.door.fixed.count)this.gl.drawArrays(this.gl.TRIANGLES,first,this.door.fixed.count-first);
+    }
     drawDoor(engine,transparent=false){
       if(!this.door)return;
       const gl=this.gl,open=engine.door?.open||0;
-      if(!transparent)this.drawGeometry(this.door.fixed);
+      if(!transparent)this.drawDoorFrame();
       for(const leaf of this.door.leaves){
+        if(this.hiddenDoorParts.has(leaf.id))continue;
         const model=new Float32Array(identity);model[14]=leaf.side*2.55*open;
         gl.uniformMatrix4fv(this.uniform.Model,false,model);
         this.drawGeometry(transparent?leaf.glass:leaf.opaque);
@@ -207,6 +233,7 @@
       gl.uniform3fv(this.uniform.Eye,engine.eye); gl.uniform2f(this.uniform.Player,p.x,p.z);
       gl.uniformMatrix4fv(this.uniform.Model,false,identity); gl.uniform1i(this.uniform.Actor,0);
       gl.uniform1f(this.uniform.Opacity,1);
+      this.updateDoorVisibility(engine);
       this.drawWorld(engine);
       this.drawDoor(engine);
       this.drawGeometry(this.markers);

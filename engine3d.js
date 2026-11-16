@@ -139,14 +139,14 @@
     nearbyChair(){
       const p=this.player;
       return CHAIRS.filter(chair=>{
-        const dx=chair.x-p.x,dz=chair.z-p.z,d=Math.hypot(dx,dz);
+        const dx=chair.x-p.x,dz=chair.z-p.z;
         const gap=Math.hypot(Math.max(Math.abs(dx)-.325,0),Math.max(Math.abs(dz)-.37,0));
-        return gap<=PLAYER_RADIUS+.09&&d>.1&&(Math.sin(p.dir)*dx-Math.cos(p.dir)*dz)/d>.72;
+        return gap<=PLAYER_RADIUS+.09;
       }).sort((a,b)=>Math.hypot(a.x-p.x,a.z-p.z)-Math.hypot(b.x-p.x,b.z-p.z))[0]||null;
     }
     physicalAction(){
       const seat=this.seating;
-      if(seat)return{kind:'stand',title:'Cadeira',label:seat.phase==='seated'?'Levantar':seat.phase==='sitting'?'Sentando…':'Levantando…',hint:'E para levantar da cadeira',disabled:seat.phase!=='seated'};
+      if(seat)return{kind:'stand',title:'Cadeira',label:seat.phase==='seated'?'Levantar':seat.phase==='aligning'?'Posicionando…':seat.phase==='sitting'?'Sentando…':seat.phase==='leaving'?'Saindo…':'Levantando…',hint:seat.phase==='seated'?'E para levantar da cadeira':'Aguarde a animação terminar.',disabled:seat.phase!=='seated'};
       if(this.nearbyChair())return{kind:'chair',title:'Cadeira de escritório',label:'Sentar',hint:'E para sentar nesta cadeira',disabled:false};
       const p=this.player;
       if(Math.abs(p.x)<1.65&&Math.abs(p.z)<2.35){
@@ -162,6 +162,30 @@
       ]),{x:c.x,z:c.z-f*.85}];
       return candidates.find(p=>this.canMove(p.x,p.z))||null;
     }
+    seatApproach(chair,start){
+      const f=chair.facing,front={x:chair.x,z:chair.z+f*.44},path=[];
+      // Reach the front of the cushion before bending. Side/back contacts route
+      // around the backrest instead of sliding the standing body through it.
+      if((start.z-chair.z)*f<.30){
+        const side=start.x<chair.x?-1:1;
+        if((start.z-chair.z)*f<-.25)path.push({x:chair.x+side*.66,z:chair.z-f*.56});
+        path.push({x:chair.x+side*.66,z:front.z});
+      }
+      path.push(front);return path;
+    }
+    followSeatPath(seat,dt){
+      const point=seat.path[seat.pathIndex];
+      if(!point){seat.moving=false;return true;}
+      const dx=point.x-this.player.x,dz=point.z-this.player.z,d=Math.hypot(dx,dz),step=Math.min(d,dt*2.0);
+      if(d>.00001){
+        this.player.x+=dx/d*step;this.player.z+=dz/d*step;
+        this.player.dir=turn(this.player.dir,Math.atan2(dx,-dz),Math.min(1,dt*12));
+        this.walkDistance+=step;
+      }
+      seat.moving=step>.0001;
+      if(d<=step+.00001)seat.pathIndex++;
+      return seat.pathIndex>=seat.path.length;
+    }
     usePhysical(){
       if(this.paused||this.events.isBlocked?.())return false;
       const action=this.physicalAction();if(!action||action.disabled)return false;
@@ -174,7 +198,8 @@
         Object.assign(this.seating,{phase:'standing',elapsed:0,exit});return true;
       }
       const chair=this.nearbyChair();if(!chair)return false;
-      this.seating={chair,phase:'sitting',elapsed:0,blend:0,start:{...this.player}};
+      const start={...this.player},path=this.seatApproach(chair,start);
+      this.seating={chair,phase:'aligning',elapsed:0,blend:0,start,path,pathIndex:0,approach:path.map(p=>({...p}))};
       this.walking=false;return true;
     }
     updateFurniture(dt){
@@ -182,27 +207,41 @@
       if(door){
         const next=door.open+Math.sign(door.target-door.open)*Math.min(Math.abs(door.target-door.open),dt*1.05);
         const p=this.player;
-        // Leave room for the player's capsule throughout a closing step.
-        const unsafe=door.target===0&&Math.abs(p.x-.12)<.065+PLAYER_RADIUS+.10&&this.doorBoxes(next).some(b=>Math.abs(p.z-b.z)<b.hz+PLAYER_RADIUS+.16);
-        if(unsafe){door.target=1;this.events.onNotice?.('Passagem ocupada: a porta voltou a abrir.');}
+        // An obstruction pauses a previously requested close; proximity never
+        // starts an opening or closing operation or reverses the chosen target.
+        const unsafe=next<door.open&&Math.abs(p.x-.12)<.065+PLAYER_RADIUS+.10&&this.doorBoxes(next).some(b=>Math.abs(p.z-b.z)<b.hz+PLAYER_RADIUS+.16);
+        if(unsafe){if(!door.blocked)this.events.onNotice?.('Passagem ocupada: fechamento pausado.');}
         else door.open=next;
+        door.blocked=unsafe;
       }
       const seat=this.seating;if(!seat)return;
       seat.elapsed+=dt;
       const c=seat.chair,anchor={x:c.x,z:c.z+c.facing*.035};
-      if(seat.phase==='sitting'){
-        const t=Math.min(1,seat.elapsed/1.05),move=ease((t-.18)/.82);
-        this.player.x=seat.start.x+(anchor.x-seat.start.x)*move;
-        this.player.z=seat.start.z+(anchor.z-seat.start.z)*move;
-        this.player.dir=turn(seat.start.dir,c.dir,ease(t/.32));
-        seat.blend=ease((t-.24)/.76);
+      if(seat.phase==='aligning'){
+        if(this.followSeatPath(seat,dt)){
+          if(seat.turnStart===undefined){seat.turnStart=this.player.dir;seat.turnTime=0;}
+          seat.moving=false;seat.turnTime+=dt;
+          this.player.dir=turn(seat.turnStart,c.dir,ease(seat.turnTime/.26));
+          if(seat.turnTime>=.26){seat.phase='sitting';seat.elapsed=0;seat.front={x:this.player.x,z:this.player.z};}
+        }
+      }else if(seat.phase==='sitting'){
+        seat.moving=false;
+        const t=Math.min(1,seat.elapsed/.9),move=ease(t);
+        this.player.x=seat.front.x+(anchor.x-seat.front.x)*move;
+        this.player.z=seat.front.z+(anchor.z-seat.front.z)*move;
+        this.player.dir=c.dir;
+        seat.blend=move;
         if(t===1)seat.phase='seated';
       }else if(seat.phase==='standing'){
         const t=Math.min(1,seat.elapsed/.95),move=ease(t);
-        this.player.x=anchor.x+(seat.exit.x-anchor.x)*move;
-        this.player.z=anchor.z+(seat.exit.z-anchor.z)*move;
+        this.player.x=anchor.x+(seat.front.x-anchor.x)*move;
+        this.player.z=anchor.z+(seat.front.z-anchor.z)*move;
         seat.blend=1-ease(t);
-        if(t===1){this.player.x=seat.exit.x;this.player.z=seat.exit.z;this.seating=null;}
+        if(t===1){
+          seat.phase='leaving';seat.path=[...seat.approach.slice(0,-1).reverse(),seat.exit];seat.pathIndex=0;
+        }
+      }else if(seat.phase==='leaving'){
+        if(this.followSeatPath(seat,dt)){this.player.x=seat.exit.x;this.player.z=seat.exit.z;this.seating=null;}
       }
     }
     canMove(x,z){
@@ -223,7 +262,7 @@
     cameraPointBlocked(x,y,z){
       const padding=this.cameraPadding;
       if([x,y,z].some((v,i)=>v<CAMERA_ROOM.min[i]+padding||v>CAMERA_ROOM.max[i]-padding))return true;
-      for(const box of [...WALL_BOXES,...this.doorBoxes()]){
+      for(const box of WALL_BOXES){
         if(y<box.top+padding&&Math.abs(x-box.x)<box.hx+padding&&Math.abs(z-box.z)<box.hz+padding)return true;
       }
       return false;
@@ -237,7 +276,7 @@
         if(d>0)limit=Math.min(limit,(CAMERA_ROOM.max[axis]-padding-from[axis])/d);
         else if(d<0)limit=Math.min(limit,(CAMERA_ROOM.min[axis]+padding-from[axis])/d);
       }
-      for(const wall of [...WALL_BOXES,...this.doorBoxes()]){
+      for(const wall of WALL_BOXES){
         const min=[wall.x-wall.hx-padding,-padding,wall.z-wall.hz-padding];
         const max=[wall.x+wall.hx+padding,wall.top+padding,wall.z+wall.hz+padding];
         let enter=0,leave=1;
@@ -265,7 +304,7 @@
       return distanceSq<radius*radius;
     }
     update(dt){this.t+=dt;if(!this.paused&&!this.events.isBlocked?.())this.updateFurniture(dt);let yaw=this.yaw;let speed=dt*3.6,dx=0,dz=0; if(this.keys.w||this.keys.arrowup){dx-=Math.sin(yaw);dz-=Math.cos(yaw)}if(this.keys.s||this.keys.arrowdown){dx+=Math.sin(yaw);dz+=Math.cos(yaw)}if(this.keys.a){dx-=Math.cos(yaw);dz+=Math.sin(yaw)}if(this.keys.d){dx+=Math.cos(yaw);dz-=Math.sin(yaw)}if(this.keys.arrowleft)this.yaw+=dt*1.65;if(this.keys.arrowright)this.yaw-=dt*1.65;
-      const moving=Math.hypot(dx,dz)>.01,controlAllowed=!this.paused&&!this.events.isBlocked?.()&&!this.seating;this.walking=false;
+      const moving=Math.hypot(dx,dz)>.01,controlAllowed=!this.paused&&!this.events.isBlocked?.()&&!this.seating;this.walking=!!this.seating?.moving;
       if(moving&&controlAllowed){let n=Math.hypot(dx,dz);dx=dx/n*speed;dz=dz/n*speed;const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.12)),stepX=dx/steps,stepZ=dz/steps,startX=this.player.x,startZ=this.player.z;
         for(let i=0;i<steps;i++){if(this.canMove(this.player.x+stepX,this.player.z))this.player.x+=stepX;if(this.canMove(this.player.x,this.player.z+stepZ))this.player.z+=stepZ;}
         const movedX=this.player.x-startX,movedZ=this.player.z-startZ;
