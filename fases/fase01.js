@@ -19,6 +19,14 @@
   ];
   const st={stage:'welcome',dialogStep:0,dialogReply:null,interviewScore:0,interviewPath:[],plan:Object.fromEntries(techs.map(t=>[t.id,0])),priority:Object.fromEntries(techs.map(t=>[t.id,t.priority])),executed:Object.fromEntries(techs.map(t=>[t.id,0])),spent:0,budget:12,adjustments:0,adjustmentOpen:false,report:null,modal:false,dialogueOpen:false,speaking:false,result:null};
   const SPEECH_CPS=30;
+  function shuffleResponses(options){
+    const shuffled=options.slice();
+    for(let i=shuffled.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [shuffled[i],shuffled[j]]=[shuffled[j],shuffled[i]];
+    }
+    return shuffled;
+  }
   let engine=null,near=null,toastTimer=null,speechTimer=null,speechToken=0;
   const phoneInput=matchMedia('(any-pointer: coarse)');
   const hudPanels=[['missionCard','missionToggle'],['quickbar','workToggle']];
@@ -138,10 +146,11 @@
     $('#dialogueSpeaker').textContent='MARCOS · GESTOR OPERACIONAL';$('#dialogueStep').textContent=`ENTREVISTA ${st.dialogStep+1} / ${interview.length}`;
     $('#dialogueChoices').innerHTML='';$('#dialogueContinue').hidden=true;$('#dialogueHint').textContent='Ouça o gestor; as opções aparecem quando a fala terminar.';
     typeSpeech(line,()=>{
+      const options=shuffleResponses(d.opts);
       $('#dialogueHint').textContent='A fala terminou. Escolha sua resposta.';
-      $('#dialogueChoices').innerHTML=d.opts.map((o,i)=>`<button class="dialogue-choice" data-choice="${i}"><strong>${String.fromCharCode(65+i)}</strong>${o.t}</button>`).join('');
+      $('#dialogueChoices').innerHTML=options.map((o,i)=>`<button class="dialogue-choice" data-choice="${i}"><strong>${String.fromCharCode(65+i)}</strong>${o.t}</button>`).join('');
       document.querySelectorAll('#dialogueChoices [data-choice]').forEach(b=>b.onclick=()=>{
-        const answer=d.opts[+b.dataset.choice];st.interviewPath[st.dialogStep]=!!answer.good;if(answer.good)st.interviewScore++;
+        const answer=options[+b.dataset.choice];st.interviewPath[st.dialogStep]=!!answer.good;if(answer.good)st.interviewScore++;
         $('#dialogueSpeaker').textContent='FEEDBACK PEDAGÓGICO';$('#dialogueStep').textContent=answer.good?'BOA CONDUÇÃO':'REVEJA A DECISÃO';$('#dialogueChoices').innerHTML='';
         $('#dialogueHint').textContent='Leia o retorno antes de continuar.';$('#dialogueContinue').hidden=true;
         stopSpeech();$('#dialogueText').textContent=answer.response;$('#dialogueHint').textContent=`${answer.good?'Boa condução.':'Use o feedback para revisar o julgamento.'} Continue para seguir.`;$('#dialogueContinue').hidden=false;

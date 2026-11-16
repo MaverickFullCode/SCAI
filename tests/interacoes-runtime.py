@@ -82,7 +82,7 @@ with sync_playwright() as pw:
      assert frame.locator('#dialogueChoices button').count()==0
      assert frame.locator('#physicalAction').is_hidden()
      page.clock.fast_forward(13000)
-     frame.locator('#dialogueChoices button').first.click();frame.locator('#dialogueContinue').click()
+     frame.locator('#dialogueChoices button').filter(has_text='Solicitar registros' if question==0 else 'Ouvir as preocupações').click();frame.locator('#dialogueContinue').click()
     frame.locator('#openPlan').click();frame.locator('[data-inc="docs"]').click();frame.locator('#startExecution').click()
 
     contacts=frame.evaluate('''()=>{

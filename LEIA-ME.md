@@ -1,4 +1,4 @@
-# SCAI • Versão Alfa 0.3
+# SCAI • Versão Alfa 0.3.2
 
 Leia também [MEMORIA-DO-PROJETO.md](MEMORIA-DO-PROJETO.md) para o registro permanente da conversa de origem, metodologia e decisões visuais.
 
@@ -50,6 +50,6 @@ No celular, os botões **Missão** e **Trabalho** abrem os respectivos painéis 
 
 A missão foi percorrida até o resultado no Microsoft Edge, com abertura pelo menu e diretamente pelo arquivo da fase. Foram conferidos entrevista, feedback instantâneo, metas e saldo, mudanças de plano sucessivas, marcadores e relatório. A cena rodou a aproximadamente 60 FPS a 1180 × 756 em Intel UHD Graphics neste computador. O layout foi conferido em viewport de 390 × 844 com perguntas e respostas em 16 px e diálogo ocupando 50% da altura; tablets e computadores mantêm 25%. O desempenho em um celular físico ainda requer conferência.
 
-## Consulta visual do tablet (teste local sem commit)
+## Consulta visual do tablet
 
-Pressione **F** ou o botão F nos controles de toque para consultar o tablet, em pé ou sentado. O auditor levanta o braço, olha para gráficos e números decorativos durante três segundos e retorna à pose anterior com a tela apagada. O movimento fica suspenso durante a consulta; saldo e missão não são alterados. Esta função está em avaliação local, posterior ao commit Versão Alfa 0.3.
+Pressione **F** ou o botão F nos controles de toque para consultar o tablet, em pé ou sentado. O auditor levanta o braço, olha para gráficos e números decorativos durante três segundos e retorna à pose anterior com a tela apagada. O movimento fica suspenso durante a consulta; saldo e missão não são alterados. A função integra a Versão Alfa 0.3.2, junto com o alinhamento da tela ao rosto. As alternativas da entrevista são embaralhadas a cada pergunta; pontuação e feedback seguem o conteúdo escolhido.
