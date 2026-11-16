@@ -103,7 +103,7 @@
     }
     function chair(x,z,facing,base) {
       mesh.object(`chair:${x}:${z}`,()=>{
-      // Facing local +Z: both rows and the two single desks use this same reference.
+      // Facing local +Z: office and warehouse chairs use this same reference.
       const f=facing, a=f<0?Math.PI:0, at=(dx,y,dz)=>[x+dx*f,y,z+dz*f];
       surface(x,z,.032,.43,.44,base,.22);
       cyl(x,.26,z,.053,.33,p.chrome,12);cyl(x,.38,z,.072,.17,p.graphite,12);
@@ -436,9 +436,10 @@
     slab(5.65,.755,2.05,2.0,.96,.10,.055,p.maple);
     for(const dx of [-.877,.877])for(const dz of [-.342,.342])B(5.65+dx,.341,2.05+dz,.047,.741,.047,p.steel);
     B(5.65,.576,2.424,1.82,.168,.052,p.steel);B(5.65,.234,2.05,1.8,.061,.65,p.silver);
-    doc(5.55,.824,2.1,1.2,-.15);files(5.00,.806,2.25,3);
+    doc(5.55,.824,1.83,1.2,-.15);files(4.80,.806,1.75,3);
     R(6.23,.866,2.10,.322,.127,.22,p.graphite,.044,-.26);R(6.23,.949,2.10,.184,.073,.159,p.orange,.02,-.26);
     });
+    chair(5.65,3.15,-1,p.concrete);
     surface(15,1.4,-.042,.399,.344,p.concrete,.21);
     mesh.object('supplier-kiosk',()=>{
     R(15,.12,1.4,.619,.268,.604,p.deep,.039);

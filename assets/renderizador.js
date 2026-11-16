@@ -12,7 +12,7 @@
       for(const name of ['Position','Normal','Color','Uv','Material','Skin','Detail']){
         this.attr[name]=gl.getAttribLocation(this.program,'a'+name);
       }
-      for(const name of ['Model','VP','Eye','Atlas','Graphics','Shadow','ShadowReady','Actor','Player','Bones[0]','People','PeopleReady']){
+      for(const name of ['Model','VP','Eye','Atlas','Graphics','Shadow','ShadowReady','Actor','Player','Worker','Bones[0]','People','PeopleReady','Opacity','TabletTime']){
         this.uniform[name]=gl.getUniformLocation(this.program,'u'+name);
       }
       const mesh=new SCAIMesh();
@@ -21,17 +21,21 @@
       this.cameraObjects=mesh.cameraObjects;
       this.hiddenObjects=new Set();
       this.hiddenActors=new Set();
+      this.hiddenDoorParts=new Set();
       this.shadow=SCAILighting.makeShadowMap(gl,this.world.buffer,mesh.propsStart,this.world.count);
       this.contacts=this.makeContacts(mesh.shadows);
+      if(window.SCAIDoor){
+        const door=SCAIDoor.build();
+        this.door={fixed:this.buffer(door.fixed.v,12),frameParts:door.frameParts,leaves:door.leaves.map(leaf=>({id:leaf.id,side:leaf.side,bounds:leaf.bounds,opaque:this.buffer(leaf.opaque.v,12),glass:this.buffer(leaf.glass.v,12)}))};
+      }
       this.actors={};
+      const workerChair=window.SCAI3D.chairs.find(chair=>chair.occupant==='worker');
+      this.workerPosition={x:workerChair.x,z:workerChair.z+workerChair.facing*.035,dir:workerChair.dir};
       for(const role of ['auditor','manager','worker']){
         const model=SCAIPeople.build(role);
-        const bounds={min:[Infinity,Infinity,Infinity],max:[-Infinity,-Infinity,-Infinity]};
-        for(let i=0;i<model.data.length;i+=model.stride)for(let axis=0;axis<3;axis++){
-          bounds.min[axis]=Math.min(bounds.min[axis],model.data[i+axis]);
-          bounds.max[axis]=Math.max(bounds.max[axis],model.data[i+axis]);
-        }
+        const bounds=this.actorBounds(model);
         this.actors[role]={geometry:this.buffer(model.data,model.stride,model.indices),bones:model.bones,bounds};
+        if(role==='worker')this.actors[role].seatedBounds=this.actorBounds(model,SCAIPeople.pose(0,0,0,false,role,0,false,undefined,0,1));
       }
       this.boneMatrices=new Float32Array(SCAIPeople.bones.length*16);
       gl.useProgram(this.program);
@@ -44,6 +48,7 @@
       else surfaces.addEventListener('load',()=>this.uploadImage(0,this.materialTexture,surfaces),{once:true});
       gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D,this.shadow.texture);
       gl.uniform1i(this.uniform.Atlas,0); gl.uniform1i(this.uniform.Graphics,1);
+      gl.uniform1f(this.uniform.Opacity,1);
       gl.uniform1i(this.uniform.Shadow,2); gl.uniform1i(this.uniform.ShadowReady,this.shadow.ready);
       this.peopleTexture=this.texture(3);
       gl.uniform1i(this.uniform.People,3);gl.uniform1i(this.uniform.PeopleReady,0);
@@ -162,8 +167,21 @@
       }
       if(first<this.world.count)this.gl.drawArrays(this.gl.TRIANGLES,first,this.world.count-first);
     }
-    personVisible(engine,x,z,role,dir){
-      const local=this.actors[role].bounds,cs=Math.cos(dir),sn=Math.sin(dir);
+    actorBounds(model,pose){
+      const bounds={min:[Infinity,Infinity,Infinity],max:[-Infinity,-Infinity,-Infinity]},data=model.data;
+      for(let i=0;i<data.length;i+=model.stride)for(let axis=0;axis<3;axis++){
+        let value=data[i+axis];
+        if(pose){
+          const a=pose[model.bones[data[i+11]]],b=pose[model.bones[data[i+12]]],weight=data[i+13];
+          const transform=m=>m[axis]*data[i]+m[axis+4]*data[i+1]+m[axis+8]*data[i+2]+m[axis+12];
+          value=transform(a)*(1-weight)+transform(b)*weight;
+        }
+        bounds.min[axis]=Math.min(bounds.min[axis],value);bounds.max[axis]=Math.max(bounds.max[axis],value);
+      }
+      return bounds;
+    }
+    personVisible(engine,x,z,role,dir,seated=false){
+      const actor=this.actors[role],local=seated?actor.seatedBounds:actor.bounds,cs=Math.cos(dir),sn=Math.sin(dir);
       const bounds={min:[Infinity,local.min[1]-.08,Infinity],max:[-Infinity,local.max[1]+.08,-Infinity]};
       for(const xx of [local.min[0],local.max[0]])for(const zz of [local.min[2],local.max[2]]){
         const px=x+xx*cs-zz*sn,pz=z+xx*sn+zz*cs;
@@ -173,32 +191,80 @@
       if(engine.cameraOverlaps(bounds,this.hiddenActors.has(role)?.06:0)){this.hiddenActors.add(role);return false;}
       this.hiddenActors.delete(role);return true;
     }
-    drawPerson(x,z,time,walking,role,dir,mouth,walkDistance,blinkClock=time){
+    drawPerson(x,z,time,walking,role,dir,mouth,walkDistance,blinkClock=time,seatBlend=0,tabletRead=null){
       const gl=this.gl, actor=this.actors[role];
-      const pose=SCAIPeople.pose(x,z,time,walking,role,dir,mouth,walkDistance,blinkClock);
+      const pose=SCAIPeople.pose(x,z,time,walking,role,dir,mouth,walkDistance,blinkClock,seatBlend,tabletRead?.blend||0);
+      gl.uniform1f(this.uniform.TabletTime,role==='auditor'&&tabletRead?.screen?tabletRead.elapsed-.55:-1);
       for(let i=0;i<actor.bones.length;i++)this.boneMatrices.set(pose[actor.bones[i]],i*16);
       gl.uniformMatrix4fv(this.uniform['Bones[0]'],false,this.boneMatrices);
       this.bind(actor.geometry);
       if(actor.geometry.indexBuffer)gl.drawElements(gl.TRIANGLES,actor.geometry.count,actor.geometry.indexType,0);
       else gl.drawArrays(gl.TRIANGLES,0,actor.geometry.count);
     }
+    updateDoorVisibility(engine){
+      if(!this.door)return;
+      const open=engine.door?.open||0,hidden=this.hiddenDoorParts;
+      const update=(id,bounds)=>{
+        if(engine.cameraOverlaps(bounds,hidden.has(id)?.06:0))hidden.add(id);
+        else hidden.delete(id);
+      };
+      for(const part of this.door.frameParts)update(part.id,part);
+      for(const leaf of this.door.leaves){
+        const offset=leaf.side*2.55*open;
+        update(leaf.id,{min:leaf.bounds.min.map((v,i)=>v+(i===2?offset:0)),max:leaf.bounds.max.map((v,i)=>v+(i===2?offset:0))});
+      }
+    }
+    drawDoorFrame(){
+      const parts=this.door.frameParts.filter(part=>this.hiddenDoorParts.has(part.id));
+      if(!parts.length){this.drawGeometry(this.door.fixed);return;}
+      this.bind(this.door.fixed);
+      let first=0;
+      for(const part of parts){
+        if(part.first>first)this.gl.drawArrays(this.gl.TRIANGLES,first,part.first-first);
+        first=part.first+part.count;
+      }
+      if(first<this.door.fixed.count)this.gl.drawArrays(this.gl.TRIANGLES,first,this.door.fixed.count-first);
+    }
+    drawDoor(engine,transparent=false){
+      if(!this.door)return;
+      const gl=this.gl,open=engine.door?.open||0;
+      if(!transparent)this.drawDoorFrame();
+      for(const leaf of this.door.leaves){
+        if(this.hiddenDoorParts.has(leaf.id))continue;
+        const model=new Float32Array(identity);model[14]=leaf.side*2.55*open;
+        gl.uniformMatrix4fv(this.uniform.Model,false,model);
+        this.drawGeometry(transparent?leaf.glass:leaf.opaque);
+      }
+      gl.uniformMatrix4fv(this.uniform.Model,false,identity);
+    }
     draw(engine) {
-      const gl=this.gl, p=engine.player, focus=engine.events.isDialogueOpen?.(),blinkClock=performance.now()/1000;
+      const gl=this.gl, p=engine.player,worker=this.workerPosition, focus=engine.events.isDialogueOpen?.(),blinkClock=performance.now()/1000;
       gl.viewport(0,0,gl.drawingBufferWidth,gl.drawingBufferHeight);
       gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
       gl.useProgram(this.program);
       gl.uniformMatrix4fv(this.uniform.VP,false,engine.vp);
       gl.uniform3fv(this.uniform.Eye,engine.eye); gl.uniform2f(this.uniform.Player,p.x,p.z);
+      gl.uniform2f(this.uniform.Worker,worker.x+.45*Math.sin(worker.dir),worker.z-.45*Math.cos(worker.dir));
       gl.uniformMatrix4fv(this.uniform.Model,false,identity); gl.uniform1i(this.uniform.Actor,0);
+      gl.uniform1f(this.uniform.Opacity,1);
+      this.updateDoorVisibility(engine);
       this.drawWorld(engine);
+      this.drawDoor(engine);
       this.drawGeometry(this.markers);
       gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
       this.drawGeometry(this.contacts);
       gl.depthMask(true); gl.disable(gl.BLEND);
       gl.uniform1i(this.uniform.Actor,1);
-      if(!focus&&!engine.hidePlayer)this.drawPerson(p.x,p.z,engine.t,engine.walking,'auditor',p.dir,false,engine.walkDistance,blinkClock);
+      if(!focus&&!engine.hidePlayer)this.drawPerson(p.x,p.z,engine.t,engine.walking,'auditor',p.dir,false,engine.walkDistance,blinkClock,engine.seating?.blend||0,engine.tabletRead);
       if(this.personVisible(engine,-10.7,-5.2,'manager',Math.PI))this.drawPerson(-10.7,-5.2,engine.t,false,'manager',Math.PI,!!engine.events.isTalking?.(),undefined,blinkClock);
-      if(!focus&&this.personVisible(engine,3.3,-2.25,'worker',.6))this.drawPerson(3.3,-2.25,engine.t,false,'worker',.6,false,undefined,blinkClock);
+      if(!focus&&this.personVisible(engine,worker.x,worker.z,'worker',worker.dir,true))this.drawPerson(worker.x,worker.z,engine.t,false,'worker',worker.dir,false,undefined,blinkClock,1);
+      if(this.door){
+        gl.uniform1i(this.uniform.Actor,0);gl.uniform1f(this.uniform.Opacity,.16);
+        gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
+        this.drawDoor(engine,true);
+        gl.depthMask(true);gl.disable(gl.BLEND);
+        gl.uniform1f(this.uniform.Opacity,1);gl.uniform1i(this.uniform.Actor,1);
+      }
     }
   }
   window.SCAIRenderer=Renderer;

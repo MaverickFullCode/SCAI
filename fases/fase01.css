@@ -76,7 +76,7 @@ button:disabled { cursor: not-allowed; }
 #controlHelp span { color: var(--muted); font-weight: 400; }
 .action { position: absolute; z-index: 4; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 7px; max-width: calc(100vw - 24px); opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .14s; }
 .action.visible { opacity: 1; visibility: visible; pointer-events: auto; }
-#actionIcon { display: grid; place-items: center; height: 30px; width: 30px; border: 1px solid #cba669; border-radius: 4px; color: var(--gold); font-weight: 700; }
+#actionIcon, #physicalIcon { display: grid; place-items: center; height: 30px; width: 30px; border: 1px solid #cba669; border-radius: 4px; color: var(--gold); font-weight: 700; }
 .action b, .action small { display: block; white-space: nowrap; }
 .action b { font-size: 12px; }
 .action small { color: var(--muted); font-size: 10px; }
@@ -97,9 +97,9 @@ button:disabled { cursor: not-allowed; }
 .dialogue-choice strong { margin-right: 6px; color: var(--gold); font-weight: 700; }
 .dialogue-choice:hover, .dialogue-choice:focus-visible { border-color: var(--gold); background: #354e66; }
 .dialogue-footer { margin-top: 5px; min-height: 17px; color: #bccddc; font-size: 11px; }
-#game:has(.dialogue-panel:not([hidden])) :is(#missionCard, #quickbar, #mobilePanelButtons, #action, #location, #controlHelp, #touchControls, #toast, .stagebar, .brand, .chip) { display: none; }
+#game:has(.dialogue-panel:not([hidden])) :is(#missionCard, #quickbar, #mobilePanelButtons, #action, #physicalAction, #location, #controlHelp, #touchControls, #toast, .stagebar, .brand, .chip) { display: none; }
 #game:has(.dialogue-panel:not([hidden])) #topHud { justify-content: flex-end; }
-#game:has(#modal:not([hidden])) :is(#missionCard, #quickbar, #action, #location, #controlHelp, #touchControls, #topHud) { visibility: hidden; }
+#game:has(#modal:not([hidden])) :is(#missionCard, #quickbar, #action, #physicalAction, #location, #controlHelp, #touchControls, #topHud) { visibility: hidden; }
 
 .modalBackdrop { position: absolute; z-index: 20; inset: 0; display: grid; place-items: center; padding: 14px; background: rgba(12, 23, 38, .64); }
 .modalCard { color-scheme: light; position: relative; overflow-y: auto; width: min(784px, 100%); max-height: 94%; color: #203548; background: #faf8f3; border: 1px solid #ddd8cd; border-top: 4px solid #cba66c; border-radius: 10px; box-shadow: 0 22px 60px #0614254a; }
@@ -231,6 +231,28 @@ button:disabled { cursor: not-allowed; }
   #game.phone-ui .dialogue-choices { grid-column: 2; grid-row: 2; gap: 3px; }
   #game.phone-ui .dialogue-choice { padding: 2px 8px; }
   #game.phone-ui .dialogue-footer { grid-column: 1 / -1; grid-row: 3; }
+}
+/* Physical E actions coexist with the mission's Q action, including touch. */
+#physicalAction { bottom: var(--physical-bottom, max(16px, env(safe-area-inset-bottom))); }
+#physicalAction .physical-copy { min-width: 0; }
+#physicalAction b { overflow: hidden; text-overflow: ellipsis; }
+#physicalAction small { white-space: normal; max-width: 260px; line-height: 1.25; }
+#physicalAction button { flex: none; min-height: 34px; }
+#physicalIcon { flex: none; border-color: #92b9c1; color: #b4e1e5; }
+#game:has(#action.visible) #physicalAction { bottom: calc(var(--physical-bottom, max(16px, env(safe-area-inset-bottom))) + 61px); }
+#game:has(.action.visible) #controlHelp { visibility: hidden; }
+@media (pointer: coarse), (max-width: 900px) {
+  #game { --physical-bottom: 105px; }
+}
+@media (max-width: 620px) {
+  #game { --physical-bottom: 99px; }
+  #physicalAction { width: calc(100% - 24px); }
+  #physicalAction .physical-copy { flex: 1; }
+  #physicalAction b { white-space: normal; line-height: 1.2; }
+}
+@media (max-height: 480px) and (orientation: landscape) {
+  #game { --physical-bottom: 86px; }
+  #physicalAction small { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; }

@@ -131,7 +131,8 @@ with sync_playwright() as pw:
     assert abs(frame.locator('#dialogueText').bounding_box()['y']-m['questionTop'])<1
     frame.locator('#dialogueChoices').evaluate('el=>{el.scrollTop=0}')
     if label=='celular' and question==0 and args.capture:page.screenshot(path=str(ROOT/'docs/previa-celular-dialogo.png'),animations='disabled')
-   frame.locator('#dialogueChoices button').nth(1 if label in ['celular','celular-compacto'] and question==0 else 0).click()
+   reply='Aceitar a explicação verbal' if label in ['celular','celular-compacto'] and question==0 else 'Solicitar registros' if question==0 else 'Ouvir as preocupações'
+   frame.locator('#dialogueChoices button').filter(has_text=reply).click()
    assert not frame.evaluate('qaEngine.events.isTalking()')
    frame.locator('#dialogueContinue').click()
   frame.locator('#openPlan').click();frame.locator('[data-inc="docs"]').click();frame.locator('#startExecution').click();draw(frame)

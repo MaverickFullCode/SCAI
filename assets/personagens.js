@@ -527,8 +527,18 @@
       m.bone('arm'+side);
       const sleeve=worker?P.shirt:P.coat;
       if(worker){
-        loft([[1.98,.092,.094,.429,.006],[2.015,.102,.106,.431,.009],[2.105,.105,.111,.422,.011],[2.258,.119,.128,.403,.014],[2.377,.120,.132,.369,.016],[2.431,.096,.105,.359,.016],[2.466,.047,.053,.348,.017],[2.473,.004,.005,.345,.017]],sleeve,fabric,30,30);
-        loft([[1.596,.058,.062,.457,-.051],[1.74,.074,.082,.455,-.020],[1.88,.087,.096,.445,.002],[1.985,.087,.10,.432,.005],[2.042,.086,.096,.429,.005]],skinC,skin,28,28);
+        // Short sleeve ends above the elbow, with a real hem and inner fabric wall.
+        loft([[2.15,.103,.109,.415,.012],[2.158,.109,.117,.415,.012],[2.18,.110,.119,.412,.012],[2.258,.119,.128,.403,.014],[2.377,.120,.132,.369,.016],[2.431,.096,.105,.359,.016],[2.466,.047,.053,.348,.017],[2.473,.004,.005,.345,.017]],sleeve,fabric,30,30);
+        m.surface((u,v)=>{const a=u*TAU;return[s*(.415+sin(a)*lerp(.079,.103,v)),2.15,.012-cos(a)*lerp(.084,.109,v)];},30,2,tint(sleeve,.86),fabric);
+        loft([[2.15,.079,.084,.415,.012],[2.18,.081,.087,.412,.012]],tint(sleeve,.77),fabric,30,4);
+        // Bare anatomy is a separate, slimmer mesh; it tapers into the existing hand.
+        const bareStart=m.out.length;
+        loft([[1.595,.044,.052,.456,-.050],[1.64,.045,.053,.457,-.043],[1.74,.050,.058,.455,-.020],[1.86,.059,.064,.445,-.001],[1.965,.061,.064,.434,.005],[2.015,.058,.061,.429,.005],[2.075,.063,.067,.425,.008],[2.15,.071,.077,.415,.012],[2.19,.073,.079,.411,.012]],skinC,skin,30,42);
+        // Overlapping wrist surfaces follow the same hand/forearm blend when pronating.
+        for(let i=bareStart;i<m.out.length;i+=16)if(m.out[i+1]<1.626){
+          const influence=weights('hand'+side,m.out.slice(i,i+3));
+          for(let j=0;j<3;j++)m.out[i+11+j]=influence[j];
+        }
       }else{
         loft([[1.607,.073,.078,.454,-.054],[1.628,.079,.085,.453,-.052],[1.73,.082,.090,.452,-.038],[1.895,.091,.100,.44,-.003],[1.993,.096,.104,.430,.005],[2.105,.102,.110,.422,.011],[2.258,.114,.123,.403,.014],[2.377,.119,.131,.369,.016],[2.431,.096,.105,.359,.016],[2.466,.048,.054,.348,.017],[2.473,.004,.005,.345,.017]],sleeve,fabric,32,50,(a,y)=>.0038*sin(a*3+y*36)*Math.exp(-(((y-1.985)/.115)**2)));
         loft([[1.582,.067,.071,.456,-.055],[1.594,.071,.074,.456,-.055],[1.626,.073,.077,.454,-.051]],P.shirt,fabric,28,8);
@@ -553,6 +563,8 @@
         m.surface((u,v)=>point(u*TAU,sample(shapes,v)[0],tx+lerp(-.012,.012,v)),48,6,col('586372'),metal);
         for(const side of [-1,1])m.surface((u,v)=>point(u*TAU,.0001+v*.966,tx+side*.012),48,4,side>0?col('3b4656'):col('354054'),leather,side<0);
         m.ell(tx+.013,ty+.180,tz+.098,.004,.013,.013,col('202736'),metal,12,8);
+        // Screen shares the tablet bone: it remains black outside consultation.
+        m.surface((u,v)=>[tx-.0128,ty+(v-.5)*.374,tz+(u-.5)*.240],1,1,col('ffffff'),8,true);
       }
     }
   }
@@ -591,14 +603,21 @@
   const restThighAngle = Math.atan2(.017,hipHeight-kneeHeight);
   const restShinAngle = Math.atan2(-.020,kneeHeight-ankleHeight);
 
-  function pose(x,z,time=0,walking=false,role='auditor',dir=0,mouth=false,walkDistance,blinkClock=time){
+  function pose(x,z,time=0,walking=false,role='auditor',dir=0,mouth=false,walkDistance,blinkClock=time,seatBlend=0,tabletBlend=0){
     const roleOffset=role==='manager'?1.3:role==='worker'?2.7:0,t=time+roleOffset;
-    const w=walking?1:0, breath=sin(t*1.65), answer=mouth?1:0;
+    // The cushion top is .935 scene units. A .375 drop puts the lowest
+    // posterior trouser vertices on that surface, rather than inside the seat.
+    const seated=clamp(seatBlend),seatDrop=.375*seated;
+    const reading=role==='auditor'?clamp(tabletBlend):0;
+    const working=role==='worker'?seated:0;
+    const w=walking&&!seated&&!reading?1:0, breath=sin(t*1.65), answer=mouth?1:0;
     const cycle=(walkDistance ?? time*3.6)/strideDistance;
     const phase=cycle*TAU;
-    const root=transform(x,0,z,0,dir),rig={};
+    const root=transform(x,seatDrop?-seatDrop:0,z,0,dir),rig={};
     rig.body=joint(multiply(root,transform(0,.003*breath,0)),[0,1.66,0],0,-sin(phase)*.055*w,cos(phase)*.013*w);
-    rig.head=joint(rig.body,[0,2.58,0],-.013*breath+.018*sin(t*5)*answer,.029*sin(t*.66)+.033*sin(t*2.5)*answer,.006*sin(t*.94));
+    const bodyTilt=.10*sin(Math.PI*seated)-.36*working;
+    if(seated)rig.body=joint(rig.body,[0,hipHeight,.007],bodyTilt);
+    rig.head=joint(rig.body,[0,2.58,0],lerp(lerp(-.013*breath+.018*sin(t*5)*answer,-.56,working),-.42522,reading),lerp(lerp(.029*sin(t*.66)+.033*sin(t*2.5)*answer,-.08,working),.86646,reading),.006*sin(t*.94)*(1-reading)*(1-working));
     const vis=answer*(.4+.33*sin(t*19)+.20*sin(t*29+1)+.07*sin(t*42)),op=Math.max(0,vis);
     rig.jaw=joint(rig.head,[0,headHeight(2.785,role),.028],-.088*op);
     const reveal=smooth(.025,.18,op),level=headHeight(mouthHeight,role);
@@ -615,11 +634,16 @@
     rig.tablet=rig.body;
     for(const s of [-1,1]){
       const side=s<0?'L':'R',swing=-s*cos(phase);
-      if (walking) {
+      if (walking||seated) {
         const progress=(cycle+(s<0?0:.5))%1;
         const halfStep=strideDistance*stanceFraction*.5;
         let footZ, lift=0, footRoll;
-        if (progress < stanceFraction) {
+        if(seated){
+          // Two-bone IK lowers the pelvis into the cushion while the soles stay
+          // planted. The same blend runs backwards when getting out of the chair.
+          // Keep the toes clear of the meeting table's low pedestal base.
+          footZ=-.45*seated;footRoll=0;
+        } else if (progress < stanceFraction) {
           // A planted foot moves rearward relative to the body at the exact travel speed.
           footZ=-halfStep+strideDistance*progress;
           const heel=1-clamp(progress/.12);
@@ -638,12 +662,12 @@
           [.012,-.277],[.012,.143],[.020,-.293],
           [.020,.151],[.045,-.294],[.045,.152]
         ].map(([y,z])=>cos(footRoll)*(y-ankleHeight)-sin(footRoll)*(z-.010)));
-        const targetY=-footBottom+.009+lift;
-        const deltaY=targetY-hipHeight;
+        const targetY=seated?ankleHeight:-footBottom+.009+lift;
+        const deltaY=targetY+seatDrop-hipHeight;
         const deltaZ=footZ+.010-.007;
         const distanceSquared=deltaY*deltaY+deltaZ*deltaZ;
         // Let the leg reach its planted foot while keeping the pelvis at standing height.
-        const legScale=Math.max(1,(Math.sqrt(distanceSquared)+.001)/(thighLength+shinLength));
+        const legScale=seated?1:Math.max(1,(Math.sqrt(distanceSquared)+.001)/(thighLength+shinLength));
         const scaledThigh=thighLength*legScale, scaledShin=shinLength*legScale;
         const kneeFlex=Math.acos(clamp(
           (distanceSquared-scaledThigh*scaledThigh-scaledShin*scaledShin)/(2*scaledThigh*scaledShin),-1,1));
@@ -670,10 +694,48 @@
       }
       const gesture=answer*(.50+.50*sin(t*2.4+s*.8));
       const carry=role==='auditor'&&s===1;
-      rig['arm'+side]=joint(rig.body,[s*.356,2.411,.016],-.017-w*swing*(carry?.19:.39)+.07*gesture,.007*breath,-s*(.015+.019*gesture));
-      rig['fore'+side]=joint(rig['arm'+side],[s*.429,2.011,.005],(carry?.30:.08)+w*(.12+.10*Math.max(0,-swing))+.35*gesture+s*.018*breath);
+      // Keep the folio outside the chair's armrest. The free forearm folds
+      // naturally over the lap; hand, fingers and tablet share the same rig.
+      let armAngle=-.017-w*swing*(carry?.19:.39)+.07*gesture+.04*seated;
+      let foreAngle=(carry?.30:.08)+(carry?.05:.78)*seated+w*(.12+.10*Math.max(0,-swing))+.35*gesture+s*.018*breath;
+      const tableHand=seated>0&&((role==='auditor'&&s<0)||role==='worker');
+      if(tableHand){
+        // Shoulder and elbow carry the wrist towards the table before the hand
+        // pronates. The skin stays attached through the forearm/wrist blend.
+        if(working){
+          // Solve the arm towards a fixed support point on the inspection bench.
+          // Undo the torso lean and breathing before solving in shoulder space.
+          // .0715 is the palm/finger support offset below the posed wrist.
+          const targetY=(.755+.05)*1.52+.0715+seatDrop-.003*breath-hipHeight,targetZ=-.68-.007;
+          const dy=hipHeight+cos(bodyTilt)*targetY+sin(bodyTilt)*targetZ-2.411;
+          const dz=.007-sin(bodyTilt)*targetY+cos(bodyTilt)*targetZ-.016;
+          const upper=Math.hypot(.4,.011),lower=Math.hypot(.416,.060);
+          const flex=Math.acos(clamp((dy*dy+dz*dz-upper*upper-lower*lower)/(2*upper*lower),-1,1));
+          const upperRest=Math.atan2(.011,.4),lowerRest=Math.atan2(.060,.416);
+          const reach=Math.atan2(-dz,-dy)-Math.atan2(lower*sin(flex),upper+lower*cos(flex));
+          armAngle=lerp(armAngle,reach-upperRest,seated);
+          foreAngle=lerp(foreAngle,flex+upperRest-lowerRest,seated);
+        }else{
+          armAngle=lerp(armAngle,.26,seated);
+          foreAngle=lerp(foreAngle,.415,seated);
+        }
+      }
+      if(carry&&reading){armAngle=lerp(armAngle,.25,reading);foreAngle=lerp(foreAngle,2.0,reading);}
+      const armRoll=-s*(.015+.019*gesture+(carry?.27:.04)*seated)*(1-working);
+      rig['arm'+side]=joint(rig.body,[s*.356,2.411,.016],armAngle,.007*breath*(1-working),carry?lerp(armRoll,.30,reading):armRoll);
+      rig['fore'+side]=joint(rig['arm'+side],[s*.429,2.011,.005],foreAngle);
       rig['hand'+side]=rig['fore'+side];
-      if(carry)rig.tablet=rig['hand'+side];
+      if(tableHand){
+        const wrist=[s*.456,1.595,-.055];
+        rig['hand'+side]=joint(rig['fore'+side],wrist,(Math.PI/2-.15-armAngle-foreAngle-bodyTilt*working)*seated);
+        rig['hand'+side]=joint(rig['hand'+side],wrist,0,-s*Math.PI/2*seated);
+      }
+      if(carry){
+        // Face the display towards the eyes, with its top upright. A yaw-only
+        // wrist turn left the display tilted away from the reader.
+        if(reading)rig['hand'+side]=joint(rig['fore'+side],[s*.456,1.595,-.055],.52313*reading,.58715*reading,.34955*reading);
+        rig.tablet=rig['hand'+side];
+      }
     }
     return rig;
   }
