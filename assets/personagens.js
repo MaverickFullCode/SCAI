@@ -434,7 +434,8 @@
     };
     for(const finger of fingerShapes)chain(finger.points,finger.radii);
     if(carry){
-      chain([[.435,1.55,-.096],[.437,1.578,-.114],[.405,1.615,-.120],[.380,1.598,-.119],[.376,1.568,-.112]],
+      // The thumb grows from the thenar pad below the wrist and opposes the fingers.
+      chain([[.435,1.531,-.111],[.418,1.543,-.130],[.397,1.538,-.134],[.379,1.514,-.126],[.376,1.491,-.121]],
         [.021,.018,.014,.012,.010]);
     }else{
       chain([[.435,1.548,-.099],[.421,1.522,-.116],[.418,1.490,-.131],[.428,1.466,-.127]],
@@ -487,7 +488,7 @@
       const tip=finger.points.at(-1),joint=finger.points.at(-2);
       nail(0,1,{y:tip[1]+.014,at:y=>lineAtY(joint,tip,y)},.010,.006);
     }
-    if(carry)nail(0,-1,{y:1.580,at:y=>lineAtY([.380,1.598,-.119],[.376,1.568,-.112],y)},.008,.0058);
+    if(carry)nail(0,-1,{y:1.502,at:y=>lineAtY([.379,1.514,-.126],[.376,1.491,-.121],y)},.008,.0058);
     else nail(2,-1,{y:1.479,at:y=>lineAtY([.418,1.490,-.131],[.428,1.466,-.127],y)},.009,.0065);
     const form=pattern.chunks.get('handR');handForms.set(carry,form);return form;
   }
@@ -543,7 +544,7 @@
       if(role==='auditor'&&s>0){
         m.bone('tablet');
         // Original slim folio, carried vertically beside the thigh in the palm.
-        const tx=.400,ty=1.368,tz=-.065;
+        const tx=.400,ty=1.294,tz=-.065;
         const shapes=[[0,.962],[.10,.989],[.24,1],[.76,1],[.91,.988],[1,.963]];
         const point=(a,r,x)=>{
           const yy=sin(a),zz=cos(a);

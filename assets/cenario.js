@@ -70,6 +70,7 @@
     const surface=(x,z,y,rx,rz,base,dark)=>mesh.shadow(x,z,rx,rz,dark,y<0?-.039:y*sy);
     // Turned planters, stems and leaves with arched midribs; each plant has a distinct silhouette.
     function plant(x,y,z,s,seed=0) {
+      mesh.object(`plant:${x}:${y}:${z}`,()=>{
       const c=(a,b,d)=>[x+a*s,y+b*s,z+d*s];
       const profile=[[.02,.19],[.045,.225],[.41,.285],[.45,.276],[.455,.247],[.396,.242]];
       for(let j=1;j<profile.length;j++)for(let i=0;i<20;i++){
@@ -98,8 +99,10 @@
           previous=next;
         }
       }
+      });
     }
     function chair(x,z,facing,base) {
+      mesh.object(`chair:${x}:${z}`,()=>{
       // Facing local +Z: both rows and the two single desks use this same reference.
       const f=facing, a=f<0?Math.PI:0, at=(dx,y,dz)=>[x+dx*f,y,z+dz*f];
       surface(x,z,.032,.43,.44,base,.22);
@@ -121,6 +124,7 @@
         T(at(dx,.735,-.236),at(dx,.755,.164),.026,p.chrome,9);
         R(...at(dx,.775,-.009),.062,.042,.377,p.graphite,.018,a);
       }
+      });
     }
     function mug(x,y,z,s,col){
       cyl(x,y+.102*s,z,.092*s,.204*s,col,22);cyl(x,y+.205*s,z,.079*s,.004*s,p.coffee,20);
@@ -155,6 +159,7 @@
       }
     }
     function desk(x,z,kind) {
+      mesh.object(`desk:${x}:${z}`,()=>{
       surface(x,z,.004,1.17,.47,p.floor,.17);
       slab(x,.796,z,2.35,.92,.095,.072,kind?p.ivory:p.maple);
       slab(x,.733,z,2.28,.87,.036,.056,p.walnutDark);
@@ -179,6 +184,7 @@
       if(kind){mug(x-.89,.848,z+.05,.78,p.blue);files(x+.633,.844,z-.228,3);}
       else{plant(x-.855,.844,z-.191,.43,.4);book(x+.68,.89,z-.195,.416,.265,.076,p.binder,-.07);}
       chair(x,z+1.1,-1,p.floor);
+      });
     }
     function pallet(x,y,z,w,d) {
       const beam=.11, timber=p.maple;
@@ -201,6 +207,7 @@
       S([x+f*w*.231,y+h*.57,side],[ww*f,0,0],[0,ww*.5/sy,0],'carton');
     }
     function rack(x,z,index) {
+      mesh.object(`rack:${x}:${z}`,()=>{
       const front=z<0?1:-1, floorY=-.045,w=2.99,d=1.17, top=4.47;
       surface(x,z,floorY+.003,1.62,.70,p.concrete,.18);
       for(const sx of [-1,1])for(const sz of [-1,1]){
@@ -242,8 +249,10 @@
       const fx=x-w*.40,fz=z+front*(d*.5+.046);
       B(fx,3.011,fz,.47,.47/sy,.038,p.ivoryMetal);
       S([fx,3.011,fz+front*.021],[front*.423,0,0],[0,.423/sy,0],['aisleA','aisleB','aisleC'][index%3]);
+      });
     }
     function forklift(x,z) {
+      mesh.object('forklift',()=>{
       const point=(a,b,c)=>[x+a,b,z+c],bx=(a,b,c,w,h,d,co,rad=.035)=>R(...point(a,b,c),w,h,d,co,rad);
       surface(x+.2,z,-.042,1.43,.63,p.concrete,.29);
       for(const [xx,r] of [[-.72,.307],[.60,.363]])for(const f of [-1,1]){
@@ -284,6 +293,7 @@
       }
       for(const y of [.25,.706,2.19])bx(.909,y,0,.105,.086,.717,p.graphite,.01);
       T(point(.954,.295,0),point(.954,1.37,0),.043,p.chrome,10);
+      });
     }
 
     // Architecture — shell and finished floor at the original marker elevations.
@@ -332,6 +342,7 @@
     sy=1.52;
     // Carpet island and executive table, writing pads, water and fresh foliage.
     slab(-8.85,.021,-3.25,5.67,3.87,.013,.25,p.carpet,0,.003);
+    mesh.object('meeting-table',()=>{
     surface(-8.85,-3.25,.030,2.16,.84,p.carpet,.23);
     for(const sx of [-1,1]){
       R(-8.85+sx*1.27,.352,-3.25,.255,.602,.91,p.walnutDark,.046);
@@ -345,8 +356,10 @@
         glass(xx+.321,.84,-3.25+f*.488,.81);}
     }
     plant(-8.85,.846,-3.25,.51,.68);
+    });
     // Two workstations, file storage and layered accessories.
     desk(-8.8,3.8,0);desk(-4.3,3.8,1);
+    mesh.object('office-cabinet',()=>{
     surface(-3.4,-5.55,.001,.98,.37,p.floor,.16);
     R(-3.4,.452,-5.55,1.99,.812,.555,p.walnut,.028);
     B(-3.4,.095,-5.55,1.89,.128,.492,p.rail);
@@ -354,6 +367,7 @@
     for(let i=0;i<3;i++){const xx=-4.056+i*.656;R(xx,.475,-5.263,.635,.708,.03,p.oak,.009);R(xx+.193,.693,-5.237,.102,.021,.024,p.chrome,.008);}
     files(-4.20,.924,-5.58,4);book(-3.45,.96,-5.52,.372,.239,.068,p.blueBook,.03);book(-3.44,1.026,-5.52,.354,.222,.058,p.binder,-.04);
     plant(-2.82,.925,-5.58,.56,2.8);
+    });
     for(const [x,z,s,seed] of [[-11.6,5.9,1.32,1.8],[-6.55,-6.25,.98,.1],[-1.4,-6.2,1.22,2.7]]){surface(x,z,.001,.35*s,.34*s,p.floor,.23);plant(x,0,z,s,seed);}
     sy=1;
     }
@@ -401,31 +415,39 @@
     sy=1.16;
     for(let i=0;i<3;i++)for(const f of [-1,1])rack([4.5,9.3,14.1][i],f*5.75,i+(f>0?3:0));
     for(const f of [-1,1])for(const x of [6.9,11.7]){
+      mesh.object(`rack-link:${x}:${f}`,()=>{
       B(x,4.40,f*5.75,1.84,.12,.09,p.rack);
       B(x,4.36,f*5.75,.024,.20,.13,p.silver);
+      });
     }
     sy=1.32;
     for(let i=0;i<3;i++){
       const x=4.04+i*1.057;surface(x,-1.4,-.042,.498,.449,p.concrete,.23);
+      mesh.object(`pallet:${i}`,()=>{
       pallet(x,-.034,-1.4,.931,.837);
       carton(x,.145,-1.4,.81,.598+(i%2)*.092,.699,[2,1,0][i]);
+      });
     }
     forklift(12.19,-1.35);
     sy=1.52;
     // Inspection work bench and supplier kiosk inside their existing collision volumes.
     surface(5.65,2.05,-.042,1.0,.495,p.concrete,.18);
+    mesh.object('inspection-bench',()=>{
     slab(5.65,.755,2.05,2.0,.96,.10,.055,p.maple);
     for(const dx of [-.877,.877])for(const dz of [-.342,.342])B(5.65+dx,.341,2.05+dz,.047,.741,.047,p.steel);
     B(5.65,.576,2.424,1.82,.168,.052,p.steel);B(5.65,.234,2.05,1.8,.061,.65,p.silver);
     doc(5.55,.824,2.1,1.2,-.15);files(5.00,.806,2.25,3);
     R(6.23,.866,2.10,.322,.127,.22,p.graphite,.044,-.26);R(6.23,.949,2.10,.184,.073,.159,p.orange,.02,-.26);
+    });
     surface(15,1.4,-.042,.399,.344,p.concrete,.21);
+    mesh.object('supplier-kiosk',()=>{
     R(15,.12,1.4,.619,.268,.604,p.deep,.039);
     R(15.02,.796,1.4,.49,1.191,.52,p.ivoryMetal,.044);
     R(14.918,1.436,1.4,.294,.249,.607,p.rail,.04);
     S([14.769,1.444,1.4],[0,0,.525],[0,.295/sy,0],'workstation');
     R(14.724,1.138,1.4,.179,.055,.53,p.silver,.018);
     B(14.765,.861,1.4,.012,.044,.235,p.blue);
+    });
     sy=1;
     }
 

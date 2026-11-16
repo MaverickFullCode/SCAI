@@ -14,8 +14,12 @@
     pallet:HEX('#a47b55'), box:HEX('#c89d72'), boxLight:HEX('#ddb88e'), red:HEX('#d26a5b'),
   };
   const PLAYER_RADIUS=.34;
+  const WALL_BOXES=[
+    {x:0,z:-5.15,hx:.085,hz:2.55,top:5.42},{x:0,z:5.15,hx:.085,hz:2.55,top:5.42}
+  ];
+  const CAMERA_ROOM={min:[-12.54,.12,-7.43],max:[16.61,6.02,7.49]};
   const WALK_BOXES=[
-    {x:0,z:-5.15,hx:.085,hz:2.55,top:5.42},{x:0,z:5.15,hx:.085,hz:2.55,top:5.42},
+    ...WALL_BOXES,
     {x:-8.85,z:-3.25,hx:2.225,hz:.86,top:1.40},
     ...[-10.12,-8.85,-7.58].flatMap(x=>[
       {x,z:-4.62,hx:.325,hz:.37,top:1.97},{x,z:-1.92,hx:.325,hz:.37,top:1.97}
@@ -30,11 +34,11 @@
     {x:15,z:1.4,hx:.38,hz:.31,top:2.45}
   ];
   const WALK_CIRCLES=[
-    {x:-11.6,z:5.9,r:.68,cameraRadius:.85,top:3.25},
-    {x:-6.55,z:-6.25,r:.55,cameraRadius:.70,top:2.50},
-    {x:-1.4,z:-6.2,r:.65,cameraRadius:.80,top:3.10},
-    {x:-10.7,z:-5.2,r:.42,cameraRadius:.49,top:3.30},
-    {x:3.3,z:-2.25,r:.42,cameraRadius:.49,top:3.30}
+    {x:-11.6,z:5.9,r:.68},
+    {x:-6.55,z:-6.25,r:.55},
+    {x:-1.4,z:-6.2,r:.65},
+    {x:-10.7,z:-5.2,r:.42},
+    {x:3.3,z:-2.25,r:.42}
   ];
   const m4 = {
     perspective(fov,asp,n,f){const t=1/Math.tan(fov/2),o=new Float32Array(16);o[0]=t/asp;o[5]=t;o[10]=(f+n)/(n-f);o[11]=-1;o[14]=2*f*n/(n-f);return o;},
@@ -65,6 +69,9 @@
       this.last = 0;
       this.acc = 0;
       this.cameraScale = 1;
+      this.cameraNear = .12;
+      this.cameraPadding = .22;
+      this.hidePlayer = false;
       this.bind();this.resize();this.loop=this.loop.bind(this);requestAnimationFrame(this.loop);
     }
     bind() {
@@ -128,18 +135,49 @@
     }
     faceTarget(pos){const dx=pos[0]-this.player.x,dz=pos[1]-this.player.z;if(Math.hypot(dx,dz)<.001)return;this.player.dir=Math.atan2(dx,-dz);this.yaw=-this.player.dir;}
     cameraPointBlocked(x,y,z){
-      if(x < -12.53||x > 16.53||z < -7.46||z > 7.44||y < .12||y > 6.02)return true;
-      // Reuse the furniture footprints with clearance for the camera's near plane.
-      for (const box of WALK_BOXES) {
-        if (y < box.top + .12 && Math.abs(x-box.x) < box.hx + .16 && Math.abs(z-box.z) < box.hz + .16) return true;
-      }
-      for (const circle of WALK_CIRCLES) {
-        if (y < circle.top + .12 && Math.hypot(x-circle.x,z-circle.z) < circle.cameraRadius + .16) return true;
+      const padding=this.cameraPadding;
+      if([x,y,z].some((v,i)=>v<CAMERA_ROOM.min[i]+padding||v>CAMERA_ROOM.max[i]-padding))return true;
+      for(const box of WALL_BOXES){
+        if(y<box.top+padding&&Math.abs(x-box.x)<box.hx+padding&&Math.abs(z-box.z)<box.hz+padding)return true;
       }
       return false;
     }
-    cameraArmClear(from,to){const dx=to[0]-from[0],dy=to[1]-from[1],dz=to[2]-from[2],length=Math.hypot(dx,dy,dz),steps=Math.max(2,Math.ceil(length/.18));
-      for(let i=1;i<=steps;i++){const t=i/steps;if(this.cameraPointBlocked(from[0]+dx*t,from[1]+dy*t,from[2]+dz*t))return false;}return true;}
+    cameraWallScale(from,to){
+      // Continuous segment/box intersection protects thin walls, even during fast turns.
+      const delta=to.map((v,i)=>v-from[i]),padding=this.cameraPadding;
+      let limit=1;
+      for(let axis=0;axis<3;axis++){
+        const d=delta[axis];
+        if(d>0)limit=Math.min(limit,(CAMERA_ROOM.max[axis]-padding-from[axis])/d);
+        else if(d<0)limit=Math.min(limit,(CAMERA_ROOM.min[axis]+padding-from[axis])/d);
+      }
+      for(const wall of WALL_BOXES){
+        const min=[wall.x-wall.hx-padding,-padding,wall.z-wall.hz-padding];
+        const max=[wall.x+wall.hx+padding,wall.top+padding,wall.z+wall.hz+padding];
+        let enter=0,leave=1;
+        for(let axis=0;axis<3;axis++){
+          const d=delta[axis];
+          if(Math.abs(d)<1e-9){if(from[axis]<min[axis]||from[axis]>max[axis]){leave=-1;break;}}
+          else{
+            const a=(min[axis]-from[axis])/d,b=(max[axis]-from[axis])/d;
+            enter=Math.max(enter,Math.min(a,b));leave=Math.min(leave,Math.max(a,b));
+          }
+        }
+        if(enter<=leave&&leave>=0)limit=Math.min(limit,enter);
+      }
+      return limit<1?Math.max(0,limit-.0001):1;
+    }
+    cameraArmClear(from,to){return this.cameraWallScale(from,to)===1;}
+    cameraOverlaps(bounds,extra=0){
+      // Hide only objects touching the eye/near plane, not the entire sight line.
+      const radius=this.cameraPadding+extra;
+      let distanceSq=0;
+      for(let axis=0;axis<3;axis++){
+        const d=Math.max(bounds.min[axis]-this.eye[axis],0,this.eye[axis]-bounds.max[axis]);
+        distanceSq+=d*d;
+      }
+      return distanceSq<radius*radius;
+    }
     update(dt){this.t+=dt;let yaw=this.yaw;let speed=dt*3.6,dx=0,dz=0; if(this.keys.w||this.keys.arrowup){dx-=Math.sin(yaw);dz-=Math.cos(yaw)}if(this.keys.s||this.keys.arrowdown){dx+=Math.sin(yaw);dz+=Math.cos(yaw)}if(this.keys.a){dx-=Math.cos(yaw);dz+=Math.sin(yaw)}if(this.keys.d){dx+=Math.cos(yaw);dz-=Math.sin(yaw)}if(this.keys.arrowleft)this.yaw+=dt*1.65;if(this.keys.arrowright)this.yaw-=dt*1.65;
       const moving=Math.hypot(dx,dz)>.01,controlAllowed=!this.paused&&!this.events.isBlocked?.();this.walking=false;
       if(moving&&controlAllowed){let n=Math.hypot(dx,dz);dx=dx/n*speed;dz=dz/n*speed;const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.12)),stepX=dx/steps,stepZ=dz/steps,startX=this.player.x,startZ=this.player.z;
@@ -157,20 +195,18 @@
         this.eye=[-10.16,2.84,-2.55];center=[-10.7,2.35,-5.20];fov=39;this.cameraScale=1;
       } else {
         center=[x,1.59,z];fov=55;const cameraAt=scale=>[x+Math.sin(this.yaw)*6.2*scale,center[1]+1.67*scale,z+Math.cos(this.yaw)*6.2*scale];
-        let scale=1,candidate=cameraAt(scale);
-        if(!this.cameraArmClear(center,candidate)){
-          // Find the furthest unobstructed point; binary refinement keeps zoom changes smooth near walls.
-          let low=.015,high=1;const close=cameraAt(low);
-          if(this.cameraArmClear(center,close)){for(let i=0;i<9;i++){const mid=(low+high)*.5;if(this.cameraArmClear(center,cameraAt(mid)))low=mid;else high=mid;}scale=low;candidate=cameraAt(scale);}
-          else {scale=0;candidate=[x,center[1]+.65,z];}
-        }
+        const aspect=this.canvas.width/this.canvas.height,tan=Math.tan(fov*Math.PI/360);
+        this.cameraPadding=this.cameraNear*Math.sqrt(1+tan*tan*(1+aspect*aspect))+.045;
+        let scale=Math.max(.005,this.cameraWallScale(center,cameraAt(1))),candidate=cameraAt(scale);
         if (scale > this.cameraScale) {
           scale = Math.min(scale, this.cameraScale + dt * 2.5);
           candidate = cameraAt(scale);
         }
         this.cameraScale=scale;this.eye=candidate;
       }
-      const nearClip=focused || this.cameraScale>.45 ? .30 : .065;
+      // This distance can shrink only because of a wall. Furniture never hides the player.
+      this.hidePlayer=!focused&&this.cameraScale<(this.hidePlayer ? .24 : .20);
+      const nearClip=focused ? .30 : this.cameraNear;
       this.vp=m4.mul(m4.perspective(fov*Math.PI/180,this.canvas.width/this.canvas.height,nearClip,44),m4.lookAt(this.eye,center,[0,1,0]));}
     render(){
       this.resize();

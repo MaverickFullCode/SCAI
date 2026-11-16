@@ -142,6 +142,20 @@ test('tablet fica vertical ao lado da coxa na pose original',()=>{
   assert.ok(Math.min(...heights)>1.05&&Math.max(...heights)<1.75,'o tablet deve ficar abaixo da cintura');
 });
 
+test('polegar da mão direita nasce na palma e apoia o tablet sem atravessá-lo',()=>{
+  const model=people.build('auditor'),hand=model.bones.indexOf('handR'),thumb=[];
+  for(let i=0;i<model.data.length;i+=model.stride){
+    if(model.data[i+11]!==hand||model.data[i+9]!==1)continue;
+    const [x,y,z]=model.data.slice(i,i+3);
+    if(x<.398)thumb.push([x,y,z]);
+    const insideTablet=Math.abs(x-.400)<.009&&Math.abs(y-1.294)<.205&&Math.abs(z+.065)<.130;
+    assert.ok(!insideTablet,'a pele não pode atravessar o interior do tablet');
+  }
+  assert.ok(thumb.length>20,'o polegar deve contornar a face interna do tablet');
+  assert.ok(Math.max(...thumb.map(p=>p[1]))<1.56,'o polegar deve se encaixar abaixo do punho');
+  assert.ok(thumb.some(([x,y])=>x>.378&&y>1.48&&y<1.52),'a ponta deve apoiar a face interna do tablet');
+});
+
 test('ambos os olhos piscam a cada 4 segundos mesmo com a simulação parada',()=>{
   for(const role of ['auditor','manager','worker'])for(const side of ['L','R']){
     const blinks=[];let previouslyClosed=false;

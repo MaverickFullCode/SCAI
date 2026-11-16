@@ -14,9 +14,29 @@
       this.length = 0;
       this.shadows = [];
       this.propsStart = 0;
+      this.cameraObjects = [];
+      this.activeObject = null;
     }
     get v() { return this.storage.subarray(0,this.length); }
     beginProps() { this.propsStart = this.length / 12; }
+    object(id,draw) {
+      const previous=this.activeObject, start=this.length/12;
+      const object={id,ranges:[],min:[Infinity,Infinity,Infinity],max:[-Infinity,-Infinity,-Infinity]};
+      this.cameraObjects.push(object);this.activeObject=object;
+      draw();
+      const end=this.length/12;
+      // Nested objects own their triangles (a chair remains independent of its desk).
+      const children=this.cameraObjects.filter(item=>item!==object&&item.first>=start&&item.last<=end);
+      let cursor=start;
+      for(const child of children.filter(item=>item.parent===object)){
+        if(child.first>cursor)object.ranges.push({first:cursor,count:child.first-cursor});
+        cursor=child.last;
+      }
+      if(cursor<end)object.ranges.push({first:cursor,count:end-cursor});
+      Object.assign(object,{first:start,last:end,parent:previous});
+      this.activeObject=previous;
+      return this;
+    }
     vertex(p,n,c,uv,material = c.material ?? 8) {
       if (this.length + 12 > this.storage.length) {
         const larger = new Float32Array(this.storage.length * 2);
@@ -24,6 +44,10 @@
         this.storage = larger;
       }
       const d=this.storage, i=this.length;
+      if(this.activeObject)for(let axis=0;axis<3;axis++){
+        this.activeObject.min[axis]=Math.min(this.activeObject.min[axis],p[axis]);
+        this.activeObject.max[axis]=Math.max(this.activeObject.max[axis],p[axis]);
+      }
       d[i]=p[0]; d[i+1]=p[1]; d[i+2]=p[2];
       d[i+3]=n[0]; d[i+4]=n[1]; d[i+5]=n[2];
       d[i+6]=c[0]; d[i+7]=c[1]; d[i+8]=c[2];
