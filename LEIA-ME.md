@@ -1,4 +1,4 @@
-# SCAI • Versão Alfa 0.3.5
+# SCAI • Versão Alfa 0.4.1
 
 Leia também [MEMORIA-DO-PROJETO.md](MEMORIA-DO-PROJETO.md) para o registro permanente da conversa de origem, metodologia e decisões visuais.
 
@@ -22,13 +22,17 @@ Veja [os personagens da Versão Alfa 0.2](docs/personagens-realistas.md), aprova
 
 ## Controles
 
-Na Versão Alfa 0.3.5, integrada à **main**, **Q** aciona as conversas e procedimentos da missão. **E** usa cadeiras e a porta dupla entre o escritório e o galpão. Os botões de ação também funcionam por toque. Ao sentar, o auditor fica ancorado à cadeira; pressione E novamente para levantar. A câmera continua livre. Veja [cadeiras e porta de vidro](docs/cadeiras-e-porta.md) para os controles, capturas e validação.
+Na Versão Alfa 0.4.1, **Q** aciona as conversas e procedimentos da missão. **E** usa cadeiras e a porta dupla entre o escritório e o galpão. Os botões de ação também funcionam por toque. Ao sentar, o auditor fica ancorado à cadeira; pressione E novamente para levantar. A câmera continua livre. Veja [cadeiras e porta de vidro](docs/cadeiras-e-porta.md) para os controles, capturas e validação.
 
 O funcionário do galpão fica sentado atrás da mesa, em pose de trabalho, sem diálogo ou interação. Sua cadeira permanece ocupada; as oito cadeiras do escritório continuam disponíveis para o jogador.
+
+As janelas receberam o mesmo vidro da porta e o panorama envolve o prédio em uma cobertura externa afastada, criando profundidade em relação aos caixilhos e preenchendo as vistas laterais e para baixo. Veja a [prévia e validação das janelas](docs/janelas-de-vidro.md).
 
 No celular, os botões **Missão** e **Trabalho** abrem os respectivos painéis do topo, que começam recolhidos. Use ×, **Recolher** ou toque novamente no botão para fechá-los. A pergunta fica fixa durante a escolha das respostas. Veja as capturas e a validação em [Interface em celulares](docs/interface-celular.md).
 
 **Computador:** WASD ou ↑↓ para caminhar, ←→ ou arrastar com mouse para girar câmera, Q para interagir. **Celular/tablet:** botões direcionais, botões de câmera, arrastar o dedo na cena e botão Interagir. O botão **Localizar objetivo** procura um teste pendente e acessível pelo saldo, gira o auditor e a câmera em sua direção e indica os pontos com marcadores 3D baixos, fixos ao piso (laranja pendente e verde concluído); não teletransporta o personagem.
+
+O objetivo **Painel de indicadores** fica em frente ao armário baixo com pastas e livros no escritório. Ao concluir a missão com sucesso, a etapa **Avaliação** fica verde e recebe ✓, como as etapas anteriores.
 
 ## Conteúdo funcional no alfa
 

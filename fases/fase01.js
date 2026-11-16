@@ -7,7 +7,7 @@
     {id:'docs',name:'Inspeção documental',short:'Documentos',cost:2,priority:'Alta',place:'Mesa de documentos',pos:[-4.3,2.8],desc:'Examina notas fiscais, entradas e registros contábeis.',finding:'Notas e documentos de entrada não sustentam integralmente o saldo registrado. Há uma divergência que precisa ser conciliada.',expected:true},
     {id:'count',name:'Observação e contagem física',short:'Contagem',cost:3,priority:'Alta',place:'Estoque físico',pos:[5.1,-.55],desc:'Compara mercadorias existentes com quantidades registradas.',finding:'O sistema indica 1.200 unidades; a contagem física identificou 1.080. Diferença: 120 unidades.',expected:true},
     {id:'recalc',name:'Recálculo e conciliação',short:'Recálculo',cost:2,priority:'Alta',place:'Estação de conciliação',pos:[-8.8,2.8],desc:'Refaz cálculos e compara demonstrações com evidências.',finding:'A diferença de estoque representa superavaliação estimada em R$ 120 mil. Materialidade da missão: R$ 75 mil.',expected:true},
-    {id:'analytics',name:'Procedimentos analíticos',short:'Análises',cost:1,priority:'Média',place:'Painel de indicadores',pos:[-9.65,-6.5],desc:'Investiga variações e indicadores atípicos.',finding:'O valor do estoque subiu 24%, enquanto as receitas cresceram 3%. Isso reforça o risco identificado.',expected:true},
+    {id:'analytics',name:'Procedimentos analíticos',short:'Análises',cost:1,priority:'Média',place:'Painel de indicadores',pos:[-3.4,-4.45],desc:'Investiga variações e indicadores atípicos.',finding:'O valor do estoque subiu 24%, enquanto as receitas cresceram 3%. Isso reforça o risco identificado.',expected:true},
     {id:'confirm',name:'Confirmação externa',short:'Confirmação',cost:3,priority:'Baixa',place:'Terminal de fornecedores',pos:[14.15,1.4],desc:'Solicita informação diretamente a terceiros independentes.',finding:'O fornecedor confirmou operações selecionadas, mas isso, isoladamente, não explica as divergências de estoque.',expected:false}
   ];
   const interviewTarget={x:-10.7,z:-.80};
@@ -113,7 +113,10 @@
   const pct=()=>Math.round(completedTechs()/4*100);
   function setStage(stage){st.stage=stage;refresh();}
   function refresh(){engine?.renderer.setMarkers(objectiveMarkers());const idx={welcome:0,interview:1,planning:2,execution:3,report:4,result:5}[st.stage];
-    $('#stagebar').innerHTML=stageNames.map((t,i)=>`<span class="${i<idx?'done':i===idx?'current':''}">${i<idx?'✓ ':''}${t}</span>`).join('');
+    $('#stagebar').innerHTML=stageNames.map((t,i)=>{
+      const done=i<idx||(i===idx&&st.stage==='result'&&st.result?.success===true);
+      return `<span class="${done?'done':i===idx?'current':''}">${done?'✓ ':''}${t}</span>`;
+    }).join('');
     const o={welcome:['Boas-vindas ao SCAI','Aprenda a observar riscos, decidir técnicas de auditoria e justificar sua opinião.'],interview:['Entrevista com a administração','Converse com o gestor para compreender o contexto, os riscos e as pessoas envolvidas.'],planning:['Defina seu plano de auditoria','Selecione técnicas, metas e prioridades. Você dispõe de 12 pontos técnicos.'],execution:['Colete evidências suficientes','Explore os dois ambientes em 3D. Execute testes planejados ou fora da meta se houver saldo, nos pontos sinalizados.'],report:['Emita sua opinião independente','Analise as evidências que reuniu e escolha uma das quatro opiniões.'],result:['Avaliação e aprendizagem','Compare sua execução com o esperado e veja como aperfeiçoar a próxima tentativa.']}[st.stage];
     $('#objectiveTitle').textContent=o[0];$('#objectiveText').textContent=o[1];$('#missionProgress span').style.width=[8,19,39,65,83,100][idx]+'%';$('#pointsText').textContent=`Saldo ${st.budget-st.spent} PT`;
     $('#missionTip').textContent=st.stage==='execution'?'Aproxime-se de um ponto ◎ e pressione Q ou toque em Interagir.':'WASD: andar • Q: missão • E: cadeira/porta';

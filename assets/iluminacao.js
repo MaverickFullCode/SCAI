@@ -54,6 +54,7 @@
     uniform vec3 uEye;
     uniform vec2 uPlayer;
     uniform vec2 uWorker;
+    uniform sampler2D uPanorama;
     uniform float uOpacity,uTabletTime;
     varying vec3 world,normal,color;
     varying vec3 localPosition;
@@ -207,10 +208,20 @@
       lit+=edge*max(dot(n,normalize(vec3(.52,.65,-.45))),0.)*vec3(.026,.040,.064);
       return pow(clamp(lit*1.10/(1.+lit*.10),0.,1.),vec3(1./2.2));
     }
+    vec3 panoramaColor(float horizontal,float vertical){
+      // Overlap the two ends of the photograph instead of mirroring buildings.
+      float phase=fract(horizontal)*.90;
+      vec3 current=texture2D(uPanorama,vec2(phase,vertical)).rgb;
+      if(phase<.10){
+        vec3 previous=texture2D(uPanorama,vec2(phase+.90,vertical)).rgb;
+        current=mix(previous,current,smoothstep(0.,.10,phase));
+      }
+      return current;
+    }
     void main(){
       float m=floor(material+.5);
-      // Only the door's two panes use this cheap transparent finish. Their tint
-      // is composited over the already rendered scene, without refraction.
+      // Doors and windows share this transparent finish, composited over the
+      // already rendered scene without refraction or real-time reflections.
       if(uOpacity<.999&&m==9.){
         vec3 n=normalize(normal),v=normalize(uEye-world);
         float edge=pow(1.-abs(dot(n,v)),3.);
@@ -229,8 +240,20 @@
         gl_FragColor=vec4(portraitMaterial(m,base,normalize(normal),normalize(uEye-world)),1.);
         return;
       }
-      if(m>=12. && m<=14.) base=texture2D(uGraphics,uv).rgb;
-      if(windowPane){ gl_FragColor=vec4(base*.97+vec3(.022,.027,.035),1.);return; }
+      if(windowPane){
+        base=panoramaColor(uv.x,clamp(uv.y,0.,1.));
+        if(uv.y>1.){
+          // Blend into canopy rows to extend the forest beneath the image.
+          // Sampling foliage keeps trunks upright and avoids mirrored reflections.
+          float extension=uv.y-1.;
+          float phase=mod(extension,.145);
+          vec3 canopy=panoramaColor(uv.x,.82+phase);
+          if(phase<.035)canopy=mix(panoramaColor(uv.x,.965+phase),canopy,smoothstep(0.,.035,phase));
+          base=mix(base,canopy,smoothstep(0.,.015,extension));
+        }
+        gl_FragColor=vec4(base*.97+vec3(.022,.027,.035),1.);return;
+      }
+      if(m>=12. && m<=13.) base=texture2D(uGraphics,uv).rgb;
       if(m<8. || m==20. || m==23.) {
         float tile=m==20.?2.:(m==23.?3.:m);
         float scale=tile==0.?.56:(tile==2.||tile==3.?2.6:.65);
@@ -299,5 +322,5 @@
     gl.bindFramebuffer(gl.FRAMEBUFFER,null);gl.deleteFramebuffer(frame);gl.deleteRenderbuffer(depth);
     return {texture,ready:ready && count>start};
   }
-  window.SCAILighting={program:gl=>link(gl,vert,frag),makeShadowMap};
+  window.SCAILighting={program:gl=>link(gl,vert,frag),makeShadowMap,glass:{tint:'8fbbca',material:9,opacity:.16}};
 })();
