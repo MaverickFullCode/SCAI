@@ -1,7 +1,7 @@
 /* SCAI centraliza a seleção e inicialização das fases; cada fase é um HTML independente. */
 (() => {
   'use strict';
-  const phaseCatalog=[{id:'alpha01',name:'Auditoria de estoques',file:'fases/fase01.html?v=funcionario-galpao-1',enabled:true}];
+  const phaseCatalog=[{id:'alpha01',name:'Auditoria de estoques',file:'fases/fase01.html?v=bracos-trabalhador-1',enabled:true}];
   const menu=document.getElementById('menu'),player=document.getElementById('player'),frame=document.getElementById('phaseFrame');
   const start=(id='alpha01')=>{const phase=phaseCatalog.find(p=>p.id===id&&p.enabled);if(!phase)return;menu.hidden=true;player.hidden=false;document.body.style.overflow='hidden';frame.src=phase.file;frame.focus();};
   const exit=()=>{frame.src='about:blank';player.hidden=true;menu.hidden=false;document.body.style.overflow='';updateLast();};
