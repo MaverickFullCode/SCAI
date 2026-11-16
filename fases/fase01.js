@@ -108,7 +108,7 @@
     $('#stagebar').innerHTML=stageNames.map((t,i)=>`<span class="${i<idx?'done':i===idx?'current':''}">${i<idx?'✓ ':''}${t}</span>`).join('');
     const o={welcome:['Boas-vindas ao SCAI','Aprenda a observar riscos, decidir técnicas de auditoria e justificar sua opinião.'],interview:['Entrevista com a administração','Converse com o gestor para compreender o contexto, os riscos e as pessoas envolvidas.'],planning:['Defina seu plano de auditoria','Selecione técnicas, metas e prioridades. Você dispõe de 12 pontos técnicos.'],execution:['Colete evidências suficientes','Explore os dois ambientes em 3D. Execute testes planejados ou fora da meta se houver saldo, nos pontos sinalizados.'],report:['Emita sua opinião independente','Analise as evidências que reuniu e escolha uma das quatro opiniões.'],result:['Avaliação e aprendizagem','Compare sua execução com o esperado e veja como aperfeiçoar a próxima tentativa.']}[st.stage];
     $('#objectiveTitle').textContent=o[0];$('#objectiveText').textContent=o[1];$('#missionProgress span').style.width=[8,19,39,65,83,100][idx]+'%';$('#pointsText').textContent=`Saldo ${st.budget-st.spent} PT`;
-    $('#missionTip').textContent=st.stage==='execution'?'Aproxime-se de um ponto ◎ e pressione E ou toque em Interagir.':'WASD: andar • Arrastar: câmera • E: interagir';
+    $('#missionTip').textContent=st.stage==='execution'?'Aproxime-se de um ponto ◎ e pressione Q ou toque em Interagir.':'WASD: andar • Q: missão • E: cadeira/porta';
     $('#reportBtn').hidden=st.stage!=='execution';let q='';
     if(st.stage==='welcome'||st.stage==='interview')q='<b>Meta inicial:</b> ouvir o gestor e levantar os principais riscos antes de definir os testes.';
     if(st.stage==='planning')q=`Alocado no plano: <b>${planTotal()} / ${st.budget} PT</b><br>Consumido: ${st.spent} PT · Saldo disponível para testes: ${st.budget-st.spent} PT.`;
@@ -116,7 +116,7 @@
     if(st.stage==='report'||st.stage==='result')q=`Técnicas relevantes utilizadas: <b>${pct()}%</b><br>Plano alocado: ${planTotal()} PT · consumido: ${st.spent} PT · saldo: ${st.budget-st.spent} PT.`;
     $('#quickContent').innerHTML=q;
   }
-  function intro(){setStage('welcome');show(`<div class="modal-label">MISSÃO INTRODUTÓRIA • APRENDIZADO</div><h2 id="modalTitle" class="modal-title">Bem-vindo à sua primeira auditoria.</h2><p class="modal-desc">Você é um auditor independente contratado para avaliar o estoque da <b>Aurora Distribuição S.A.</b> Nesta demonstração, terá liberdade para andar por um escritório e um galpão verdadeiramente tridimensionais.</p><img class="cover-photo" src="../assets/galpao.webp" alt="Referência artística Clean Stylized 3D do centro de distribuição"/><div class="twoCol"><div class="miniCard"><h3>01 · Aprenda com decisões</h3><p>Entrevista, identificação de riscos, técnicas, amostragem e emissão da opinião.</p></div><div class="miniCard"><h3>02 · Erros fazem parte</h3><p>O sistema compara o que era esperado com o que você fez e explica por quê.</p></div><div class="miniCard"><h3>03 · Segurança razoável</h3><p>Os pontos técnicos simulam limites de tempo e recursos. Não é possível testar tudo.</p></div><div class="miniCard"><h3>04 · Quatro opiniões</h3><p>Não modificada, com ressalva, adversa e abstenção. Sua escolha exige justificativa.</p></div></div><div class="notice"><b>O que este alfa testa:</b> movimentação/câmera WebGL, ambientes 3D, personagem com animação de boca, diálogos ramificados, plano ajustável, execução orientada por técnicas e avaliação pedagógica. O caso é fictício e simplificado para ensino.</div><div class="buttons"><button class="primary" id="startMission">Começar a entrevista →</button></div>`);$('#startMission').onclick=()=>{hide();setStage('interview');note('Procure o gestor na sala de reunião. ◎');};}
+  function intro(){setStage('welcome');show(`<div class="modal-label">MISSÃO INTRODUTÓRIA • APRENDIZADO</div><h2 id="modalTitle" class="modal-title">Bem-vindo à sua primeira auditoria.</h2><p class="modal-desc">Você é um auditor independente contratado para avaliar o estoque da <b>Aurora Distribuição S.A.</b> Nesta demonstração, terá liberdade para andar por um escritório e um galpão verdadeiramente tridimensionais.</p><img class="cover-photo" src="../assets/galpao.webp" alt="Referência artística Clean Stylized 3D do centro de distribuição"/><div class="twoCol"><div class="miniCard"><h3>01 · Aprenda com decisões</h3><p>Entrevista, identificação de riscos, técnicas, amostragem e emissão da opinião.</p></div><div class="miniCard"><h3>02 · Erros fazem parte</h3><p>O sistema compara o que era esperado com o que você fez e explica por quê.</p></div><div class="miniCard"><h3>03 · Segurança razoável</h3><p>Os pontos técnicos simulam limites de tempo e recursos. Não é possível testar tudo.</p></div><div class="miniCard"><h3>04 · Quatro opiniões</h3><p>Não modificada, com ressalva, adversa e abstenção. Sua escolha exige justificativa.</p></div></div><div class="notice"><b>Controles:</b> WASD ou setas de toque para andar, Q para conversar e executar os procedimentos, E para sentar, levantar e abrir ou fechar a porta. No toque, use os botões de ação que aparecem ao se aproximar.<br><b>O que este alfa testa:</b> movimentação/câmera WebGL, ambientes 3D, personagem com animação de boca, diálogos ramificados, plano ajustável, execução orientada por técnicas e avaliação pedagógica. O caso é fictício e simplificado para ensino.</div><div class="buttons"><button class="primary" id="startMission">Começar a entrevista →</button></div>`);$('#startMission').onclick=()=>{hide();setStage('interview');note('Procure o gestor na sala de reunião. ◎');};}
   const interview=[
     {s:'Bom dia! Fechamos nosso inventário, mas alguns lotes apresentaram diferenças. O sistema aponta mais unidades do que o levantamento físico. Qual é a sua primeira preocupação?',opts:[
       {t:'Solicitar registros, entender o processo de contagem e avaliar riscos.',good:true,response:'Excelente. Primeiro compreendemos o processo e buscamos evidências apropriadas, sem presumir culpados.'},
@@ -162,8 +162,8 @@
   ];}
   function relevantSpots(){if(st.stage==='interview')return [{key:'interview',name:'Falar com o gestor',x:interviewTarget.x,z:interviewTarget.z,y:.05}];if(st.stage==='execution')return techs.map(t=>({key:t.id,name:t.place,x:t.pos[0],z:t.pos[1],y:.05}));return [];}
   function nearest(){let list=relevantSpots().map(h=>({...h,dist:engine?engine.distance(h.x,h.z):999})).sort((a,b)=>a.dist-b.dist);return list[0]||null;}
-  function interact(h){if(!h)return;if(h.dist>2.85){note('Aproxime-se do local antes de interagir.');return;}if(h.key==='interview')interviewModal();else if(st.stage==='execution')procedureModal(h.key);}
-  function guide(){if(!engine)return;if(st.stage==='welcome'){intro();return;}if(st.stage==='planning'){planModal();return;}if(st.stage==='report'){reportModal();return;}if(st.stage==='result'){resultModal();return;}
+  function interact(h){if(st.modal||st.dialogueOpen)return;if(engine?.seating){note('Pressione E ou toque em Levantar antes de continuar a missão.');return;}if(!h)return;if(h.dist>2.85){note('Aproxime-se do local antes de interagir.');return;}if(h.key==='interview')interviewModal();else if(st.stage==='execution')procedureModal(h.key);}
+  function guide(){if(!engine)return;if(engine.seating){note('Levante-se da cadeira para localizar o próximo objetivo.');return;}if(st.stage==='welcome'){intro();return;}if(st.stage==='planning'){planModal();return;}if(st.stage==='report'){reportModal();return;}if(st.stage==='result'){resultModal();return;}
     let h;
     if(st.stage==='execution'){
       const remaining=st.budget-st.spent;
@@ -211,8 +211,16 @@
     $('#retryMission').onclick=()=>location.reload();
   }
   function updateNearbyAction(){if(!engine)return;const spots=relevantSpots();const nearby=spots.map(h=>({...h,dist:engine.distance(h.x,h.z)})).sort((a,b)=>a.dist-b.dist);near=nearby[0]||null;
-    if(st.modal||st.dialogueOpen){$('#action').classList.remove('visible');return;}
-    $('#action').classList.toggle('visible',!!near&&near.dist<=2.85);if(near){$('#actionTitle').textContent=near.name;$('#actionSubtitle').textContent=st.stage==='interview'?'Converse e escolha respostas':'Pressione E para executar se houver saldo';}
+    const blocked=st.modal||st.dialogueOpen,physical=blocked?null:engine.physicalAction?.();
+    $('#actionBtn').disabled=!!engine.seating;$('#reportBtn').disabled=!!engine.seating;
+    $('#action').classList.toggle('visible',!blocked&&!engine.seating&&!!near&&near.dist<=2.85);
+    if(near){$('#actionTitle').textContent=near.name;$('#actionSubtitle').textContent=st.stage==='interview'?'Pressione Q para conversar':'Pressione Q para executar se houver saldo';}
+    $('#physicalAction').classList.toggle('visible',!!physical);
+    if(physical){
+      $('#physicalTitle').textContent=physical.title;$('#physicalSubtitle').textContent=physical.hint||'Pressione E ou toque no botão.';
+      $('#physicalBtn').textContent=physical.label;$('#physicalBtn').disabled=!!physical.disabled;
+      $('#physicalBtn').setAttribute('aria-label',`${physical.label}: ${physical.title}`);
+    }
     $('#location').textContent=engine.player.x>0?'● Centro de distribuição':'● Escritório de auditoria';}
   let refreshTimer=0;
   function bindTouchControls() {
@@ -260,11 +268,11 @@
       });
     }
   }
-  function boot(){bindHudPanels();try{engine=new SCAI3D.Engine($('#scene'),{isBlocked:()=>st.modal||st.dialogueOpen,isTalking:()=>st.speaking,isDialogueOpen:()=>st.dialogueOpen,onInteract:()=>{if(!st.modal&&!st.dialogueOpen)interact(near)},onFrame:(e)=>{refreshTimer++;if(refreshTimer%6===0)updateNearbyAction()}});}
+  function boot(){bindHudPanels();try{engine=new SCAI3D.Engine($('#scene'),{isBlocked:()=>st.modal||st.dialogueOpen,isTalking:()=>st.speaking,isDialogueOpen:()=>st.dialogueOpen,onInteract:()=>{if(!st.modal&&!st.dialogueOpen&&!engine?.seating)interact(near)},onNotice:note,onFrame:(e)=>{refreshTimer++;if(refreshTimer%6===0)updateNearbyAction()}});}
     catch(e){console.error(e);$('#fallback').hidden=false;$('#fallback').style.display='grid';return;}
     $('#quality').onclick=()=>{engine.setEco(!engine.low);$('#quality').textContent=engine.low?'⚙ Eco ✓':'⚙ Eco';note(engine.low?'Modo econômico: resolução reduzida e até 30 FPS.':'Qualidade padrão ativada.')};
     $('#exit').onclick=()=>{if(window.parent!==window){parent.postMessage({type:'scai:exit'},'*')}else location.href='../SCAI.html'};
-    $('#actionBtn').onclick=()=>interact(near);$('#routeBtn').onclick=()=>{closeHudPanels();guide();};$('#reportBtn').onclick=reportModal;$('#modalClose').onclick=()=>{hide();if(st.stage==='welcome')setStage('interview')};
+    $('#actionBtn').onclick=()=>interact(near);$('#physicalBtn').onclick=()=>{if(st.modal||st.dialogueOpen)return;engine.usePhysical();updateNearbyAction();};$('#routeBtn').onclick=()=>{closeHudPanels();guide();};$('#reportBtn').onclick=reportModal;$('#modalClose').onclick=()=>{hide();if(st.stage==='welcome')setStage('interview')};
     bindTouchControls();
     document.addEventListener('keydown',e=>{if(e.key==='Escape'&&st.modal&&st.stage!=='result')hide();});
     intro();}

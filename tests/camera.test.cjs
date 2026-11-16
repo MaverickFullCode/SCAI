@@ -39,7 +39,8 @@ test('só o zoom muito próximo da parede oculta o auditor e ele reaparece ao af
 });
 
 test('paredes externas e divisórias impedem a saída da câmera em giros rápidos',()=>{
-  const points=[[-5.2,-.25],[-10.7,-.8],[-12.04,0],[16.19,0],[1.5,-7.07],[-3,7.03],[.5,-3],[-.5,3],[.5,0],[-.5,0]];
+  // The open glass leaf is parked on the warehouse face of the partition.
+  const points=[[-5.2,-.25],[-10.7,-.8],[-12.04,0],[16.19,0],[1.5,-7.07],[-3,7.03],[.65,-3],[-.5,3],[.5,0],[-.5,0]];
   for(const [w,h] of [[1365,864],[390,844],[844,390]])for(const [x,z] of points){
     const e=engine(w,h);assert.ok(e.canMove(x,z));
     for(let angle=0;angle<72;angle++){

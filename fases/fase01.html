@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"/>
   <meta name="theme-color" content="#102c46"/>
   <title>SCAI • Fase 01: Auditoria de Estoques</title>
-  <link rel="stylesheet" href="fase01.css?v=elenco-realista-7"/>
+  <link rel="stylesheet" href="fase01.css?v=interacoes-1"/>
 </head>
 <body>
   <main id="game" aria-label="Jogo tridimensional Simulador de Auditoria">
@@ -25,14 +25,15 @@
       <h1 id="objectiveTitle">Seu primeiro dia como auditor</h1>
       <p id="objectiveText">Conheça os controles e investigue a divergência de estoque apresentada pela gestão.</p>
       <div id="missionProgress" class="progress-track"><span></span></div>
-      <div id="missionTip">WASD para caminhar • Arraste para girar a câmera • E para interagir</div>
+      <div id="missionTip">WASD para caminhar • Arraste para girar a câmera • Q para a missão • E para cadeira/porta</div>
       <button class="panel-collapse" type="button" data-hud-close="missionCard">Recolher missão ↑</button>
     </section>
     <div id="location" class="location">● Escritório de auditoria</div>
 
-    <div id="action" class="action"><span id="actionIcon">E</span><div><b id="actionTitle">Interagir</b><small id="actionSubtitle">Aproxime-se de um ponto de interesse</small></div><button id="actionBtn" type="button">Interagir</button></div>
+    <div id="action" class="action"><span id="actionIcon">Q</span><div><b id="actionTitle">Interagir</b><small id="actionSubtitle">Aproxime-se de um ponto de interesse</small></div><button id="actionBtn" type="button">Interagir</button></div>
+    <div id="physicalAction" class="action physical-action" aria-label="Cadeiras e porta"><span id="physicalIcon" aria-hidden="true">E</span><div class="physical-copy"><b id="physicalTitle">Cadeira ou porta</b><small id="physicalSubtitle">Aproxime-se de frente</small></div><button id="physicalBtn" type="button">Usar</button></div>
     <section id="quickbar" class="glass-panel" aria-labelledby="quickTitle"><span id="quickTitle" class="eyebrow">PAINEL DE TRABALHO</span><button class="panel-close" type="button" data-hud-close="quickbar" aria-label="Fechar painel de trabalho">×</button><div id="quickContent">Sua investigação começa com a entrevista.</div><button id="routeBtn" class="route">◎ Localizar objetivo</button><button id="reportBtn" class="route secondary" hidden>Emitir opinião final →</button><button class="panel-collapse" type="button" data-hud-close="quickbar">Recolher trabalho ↑</button></section>
-    <div id="controlHelp">W A S D <span>mover</span> · mouse/toque <span>câmera</span> · E <span>interagir</span></div>
+    <div id="controlHelp">W A S D <span>mover</span> · mouse/toque <span>câmera</span> · Q <span>missão</span> · E <span>cadeira/porta</span></div>
     <div id="touchControls" aria-label="Controles para dispositivo móvel"><div class="dpad"><button data-key="w" aria-label="Avançar">▲</button><div><button data-key="a" aria-label="Esquerda">◀</button><button data-key="s" aria-label="Voltar">▼</button><button data-key="d" aria-label="Direita">▶</button></div></div><div class="look"><button data-key="arrowleft" aria-label="Girar câmera à esquerda">↶</button><button data-key="arrowright" aria-label="Girar câmera à direita">↷</button></div></div>
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
     <section id="dialoguePanel" class="dialogue-panel" aria-label="Conversa com a administração" hidden>
@@ -44,16 +45,17 @@
     <div id="modal" class="modalBackdrop" hidden><div class="modalCard" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><button id="modalClose" class="close" aria-label="Fechar janela">×</button><div id="modalBody"></div></div></div>
     <div id="fallback" hidden>Seu navegador não conseguiu iniciar o WebGL. Tente atualizar o navegador ou ativar aceleração gráfica.</div>
   </main>
-  <script src="../assets/materiais.js?v=elenco-realista-7"></script>
-  <script src="../assets/elenco-materiais.js?v=elenco-realista-7"></script>
-  <script src="../assets/horizonte.js?v=elenco-realista-7"></script>
-  <script src="../assets/graficos.js?v=elenco-realista-7"></script>
-  <script src="../assets/malha.js?v=elenco-realista-7"></script>
-  <script src="../assets/iluminacao.js?v=elenco-realista-7"></script>
-  <script src="../assets/cenario.js?v=elenco-realista-7"></script>
-  <script src="../assets/personagens.js?v=elenco-realista-7"></script>
-  <script src="../assets/renderizador.js?v=elenco-realista-7"></script>
-  <script src="../engine3d.js?v=elenco-realista-7"></script>
-  <script src="fase01.js?v=elenco-realista-7"></script>
+  <script src="../assets/materiais.js?v=interacoes-1"></script>
+  <script src="../assets/elenco-materiais.js?v=interacoes-1"></script>
+  <script src="../assets/horizonte.js?v=interacoes-1"></script>
+  <script src="../assets/graficos.js?v=interacoes-1"></script>
+  <script src="../assets/malha.js?v=interacoes-1"></script>
+  <script src="../assets/iluminacao.js?v=interacoes-1"></script>
+  <script src="../assets/cenario.js?v=interacoes-1"></script>
+  <script src="../assets/personagens.js?v=interacoes-1"></script>
+  <script src="../assets/porta.js?v=interacoes-1"></script>
+  <script src="../assets/renderizador.js?v=interacoes-1"></script>
+  <script src="../engine3d.js?v=interacoes-1"></script>
+  <script src="fase01.js?v=interacoes-1"></script>
 </body>
 </html>

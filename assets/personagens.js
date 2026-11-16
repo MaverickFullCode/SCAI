@@ -591,13 +591,17 @@
   const restThighAngle = Math.atan2(.017,hipHeight-kneeHeight);
   const restShinAngle = Math.atan2(-.020,kneeHeight-ankleHeight);
 
-  function pose(x,z,time=0,walking=false,role='auditor',dir=0,mouth=false,walkDistance,blinkClock=time){
+  function pose(x,z,time=0,walking=false,role='auditor',dir=0,mouth=false,walkDistance,blinkClock=time,seatBlend=0){
     const roleOffset=role==='manager'?1.3:role==='worker'?2.7:0,t=time+roleOffset;
-    const w=walking?1:0, breath=sin(t*1.65), answer=mouth?1:0;
+    // The cushion top is .935 scene units. A .375 drop puts the lowest
+    // posterior trouser vertices on that surface, rather than inside the seat.
+    const seated=clamp(seatBlend),seatDrop=.375*seated;
+    const w=walking&&!seated?1:0, breath=sin(t*1.65), answer=mouth?1:0;
     const cycle=(walkDistance ?? time*3.6)/strideDistance;
     const phase=cycle*TAU;
-    const root=transform(x,0,z,0,dir),rig={};
+    const root=transform(x,seatDrop?-seatDrop:0,z,0,dir),rig={};
     rig.body=joint(multiply(root,transform(0,.003*breath,0)),[0,1.66,0],0,-sin(phase)*.055*w,cos(phase)*.013*w);
+    if(seated)rig.body=joint(rig.body,[0,hipHeight,.007],.10*sin(Math.PI*seated));
     rig.head=joint(rig.body,[0,2.58,0],-.013*breath+.018*sin(t*5)*answer,.029*sin(t*.66)+.033*sin(t*2.5)*answer,.006*sin(t*.94));
     const vis=answer*(.4+.33*sin(t*19)+.20*sin(t*29+1)+.07*sin(t*42)),op=Math.max(0,vis);
     rig.jaw=joint(rig.head,[0,headHeight(2.785,role),.028],-.088*op);
@@ -615,11 +619,15 @@
     rig.tablet=rig.body;
     for(const s of [-1,1]){
       const side=s<0?'L':'R',swing=-s*cos(phase);
-      if (walking) {
+      if (walking||seated) {
         const progress=(cycle+(s<0?0:.5))%1;
         const halfStep=strideDistance*stanceFraction*.5;
         let footZ, lift=0, footRoll;
-        if (progress < stanceFraction) {
+        if(seated){
+          // Two-bone IK lowers the pelvis into the cushion while the soles stay
+          // planted. The same blend runs backwards when getting out of the chair.
+          footZ=-.61*seated;footRoll=0;
+        } else if (progress < stanceFraction) {
           // A planted foot moves rearward relative to the body at the exact travel speed.
           footZ=-halfStep+strideDistance*progress;
           const heel=1-clamp(progress/.12);
@@ -638,12 +646,12 @@
           [.012,-.277],[.012,.143],[.020,-.293],
           [.020,.151],[.045,-.294],[.045,.152]
         ].map(([y,z])=>cos(footRoll)*(y-ankleHeight)-sin(footRoll)*(z-.010)));
-        const targetY=-footBottom+.009+lift;
-        const deltaY=targetY-hipHeight;
+        const targetY=seated?ankleHeight:-footBottom+.009+lift;
+        const deltaY=targetY+seatDrop-hipHeight;
         const deltaZ=footZ+.010-.007;
         const distanceSquared=deltaY*deltaY+deltaZ*deltaZ;
         // Let the leg reach its planted foot while keeping the pelvis at standing height.
-        const legScale=Math.max(1,(Math.sqrt(distanceSquared)+.001)/(thighLength+shinLength));
+        const legScale=seated?1:Math.max(1,(Math.sqrt(distanceSquared)+.001)/(thighLength+shinLength));
         const scaledThigh=thighLength*legScale, scaledShin=shinLength*legScale;
         const kneeFlex=Math.acos(clamp(
           (distanceSquared-scaledThigh*scaledThigh-scaledShin*scaledShin)/(2*scaledThigh*scaledShin),-1,1));
@@ -670,8 +678,10 @@
       }
       const gesture=answer*(.50+.50*sin(t*2.4+s*.8));
       const carry=role==='auditor'&&s===1;
-      rig['arm'+side]=joint(rig.body,[s*.356,2.411,.016],-.017-w*swing*(carry?.19:.39)+.07*gesture,.007*breath,-s*(.015+.019*gesture));
-      rig['fore'+side]=joint(rig['arm'+side],[s*.429,2.011,.005],(carry?.30:.08)+w*(.12+.10*Math.max(0,-swing))+.35*gesture+s*.018*breath);
+      // Keep the folio outside the chair's armrest. The free forearm folds
+      // naturally over the lap; hand, fingers and tablet share the same rig.
+      rig['arm'+side]=joint(rig.body,[s*.356,2.411,.016],-.017-w*swing*(carry?.19:.39)+.07*gesture+.04*seated,.007*breath,-s*(.015+.019*gesture+(carry?.27:.04)*seated));
+      rig['fore'+side]=joint(rig['arm'+side],[s*.429,2.011,.005],(carry?.30:.08)+(carry?.05:.78)*seated+w*(.12+.10*Math.max(0,-swing))+.35*gesture+s*.018*breath);
       rig['hand'+side]=rig['fore'+side];
       if(carry)rig.tablet=rig['hand'+side];
     }

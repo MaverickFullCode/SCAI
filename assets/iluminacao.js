@@ -53,6 +53,7 @@
     uniform bool uShadowReady,uPeopleReady;
     uniform vec3 uEye;
     uniform vec2 uPlayer;
+    uniform float uOpacity;
     varying vec3 world,normal,color;
     varying vec3 localPosition;
     varying vec2 detailUv;
@@ -171,6 +172,14 @@
     }
     void main(){
       float m=floor(material+.5);
+      // Only the door's two panes use this cheap transparent finish. Their tint
+      // is composited over the already rendered scene, without refraction.
+      if(uOpacity<.999&&m==9.){
+        vec3 n=normalize(normal),v=normalize(uEye-world);
+        float edge=pow(1.-abs(dot(n,v)),3.);
+        gl_FragColor=vec4(color+vec3(.035,.055,.065)*edge,min(.34,uOpacity+edge*.14));
+        return;
+      }
       bool actor=m>=20., skin=m==21., hair=m==22., windowPane=m==14.;
       if(m==15.){
         float r2=dot(uv,uv);

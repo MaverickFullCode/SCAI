@@ -14,6 +14,12 @@
     pallet:HEX('#a47b55'), box:HEX('#c89d72'), boxLight:HEX('#ddb88e'), red:HEX('#d26a5b'),
   };
   const PLAYER_RADIUS=.34;
+  const CHAIRS=[
+    ...[-10.12,-8.85,-7.58].flatMap(x=>[{x,z:-4.62,facing:1},{x,z:-1.92,facing:-1}]),
+    {x:-8.8,z:4.9,facing:-1},{x:-4.3,z:4.9,facing:-1}
+  ].map((chair,index)=>({...chair,id:'chair-'+index,dir:chair.facing>0?Math.PI:0}));
+  const ease=value=>{const t=Math.max(0,Math.min(1,value));return t*t*(3-2*t);};
+  const turn=(from,to,t)=>from+Math.atan2(Math.sin(to-from),Math.cos(to-from))*t;
   const WALL_BOXES=[
     {x:0,z:-5.15,hx:.085,hz:2.55,top:5.42},{x:0,z:5.15,hx:.085,hz:2.55,top:5.42}
   ];
@@ -72,6 +78,8 @@
       this.cameraNear = .12;
       this.cameraPadding = .22;
       this.hidePlayer = false;
+      this.door = {open:0,target:0};
+      this.seating = null;
       this.bind();this.resize();this.loop=this.loop.bind(this);requestAnimationFrame(this.loop);
     }
     bind() {
@@ -79,12 +87,15 @@
       let cameraPointer = null, lastX = 0;
       document.addEventListener('keydown', event => {
         const key = event.key.toLowerCase();
-        if (['w','s','a','d','arrowup','arrowdown','arrowleft','arrowright','e',' '].includes(key)) {
+        if (['w','s','a','d','arrowup','arrowdown','arrowleft','arrowright','e','q',' '].includes(key)) {
           if (['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName)) return;
           event.preventDefault();
         }
         this.keys[key] = true;
-        if (key === 'e') this.events.onInteract?.();
+        if(!event.repeat&&!this.events.isBlocked?.()){
+          if(key==='q'&&!this.seating)this.events.onInteract?.();
+          if(key==='e')this.usePhysical();
+        }
       });
       document.addEventListener('keyup', event => {
         this.keys[event.key.toLowerCase()] = false;
@@ -122,9 +133,84 @@
     resize(){const scale=this.low?.68:1;const dpr=Math.min(devicePixelRatio||1,1.3)*scale;const w=Math.max(2,Math.floor(this.canvas.clientWidth*dpr)),h=Math.max(2,Math.floor(this.canvas.clientHeight*dpr));if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;this.gl.viewport(0,0,w,h)}}
     setEco(val){this.low=!!val;this.resize()}
     setInput(key,val){this.keys[key]=val}
+    doorBoxes(open=this.door?.open??1){
+      return [-1,1].map(side=>({x:.12,z:side*(1.3+2.55*open),hx:.065,hz:1.3,top:5.05}));
+    }
+    nearbyChair(){
+      const p=this.player;
+      return CHAIRS.filter(chair=>{
+        const dx=chair.x-p.x,dz=chair.z-p.z,d=Math.hypot(dx,dz);
+        const gap=Math.hypot(Math.max(Math.abs(dx)-.325,0),Math.max(Math.abs(dz)-.37,0));
+        return gap<=PLAYER_RADIUS+.09&&d>.1&&(Math.sin(p.dir)*dx-Math.cos(p.dir)*dz)/d>.72;
+      }).sort((a,b)=>Math.hypot(a.x-p.x,a.z-p.z)-Math.hypot(b.x-p.x,b.z-p.z))[0]||null;
+    }
+    physicalAction(){
+      const seat=this.seating;
+      if(seat)return{kind:'stand',title:'Cadeira',label:seat.phase==='seated'?'Levantar':seat.phase==='sitting'?'Sentando…':'Levantando…',hint:'E para levantar da cadeira',disabled:seat.phase!=='seated'};
+      if(this.nearbyChair())return{kind:'chair',title:'Cadeira de escritório',label:'Sentar',hint:'E para sentar nesta cadeira',disabled:false};
+      const p=this.player;
+      if(Math.abs(p.x)<1.65&&Math.abs(p.z)<2.35){
+        const d=Math.abs(p.x),dot=(p.x>0?-1:1)*Math.sin(p.dir);
+        if(d<.25||dot>.55)return{kind:'door',title:'Porta de vidro · escritório / galpão',label:this.door?.target?'Fechar porta':'Abrir porta',hint:'E para abrir ou fechar a passagem',disabled:false};
+      }
+      return null;
+    }
+    seatExit(seat){
+      const c=seat.chair,f=c.facing;
+      const candidates=[seat.start,{x:c.x,z:c.z+f*.85},...[1,-1].flatMap(s=>[
+        {x:c.x+s*.85,z:c.z},{x:c.x+s*.75,z:c.z+f*.76},{x:c.x+s*.75,z:c.z-f*.76}
+      ]),{x:c.x,z:c.z-f*.85}];
+      return candidates.find(p=>this.canMove(p.x,p.z))||null;
+    }
+    usePhysical(){
+      if(this.paused||this.events.isBlocked?.())return false;
+      const action=this.physicalAction();if(!action||action.disabled)return false;
+      if(action.kind==='door'){
+        this.door.target=this.door.target?0:1;return true;
+      }
+      if(action.kind==='stand'){
+        const exit=this.seatExit(this.seating);
+        if(!exit){this.events.onNotice?.('A saída da cadeira está bloqueada. Tente novamente quando houver espaço.');return false;}
+        Object.assign(this.seating,{phase:'standing',elapsed:0,exit});return true;
+      }
+      const chair=this.nearbyChair();if(!chair)return false;
+      this.seating={chair,phase:'sitting',elapsed:0,blend:0,start:{...this.player}};
+      this.walking=false;return true;
+    }
+    updateFurniture(dt){
+      const door=this.door;
+      if(door){
+        const next=door.open+Math.sign(door.target-door.open)*Math.min(Math.abs(door.target-door.open),dt*1.05);
+        const p=this.player;
+        // Leave room for the player's capsule throughout a closing step.
+        const unsafe=door.target===0&&Math.abs(p.x-.12)<.065+PLAYER_RADIUS+.10&&this.doorBoxes(next).some(b=>Math.abs(p.z-b.z)<b.hz+PLAYER_RADIUS+.16);
+        if(unsafe){door.target=1;this.events.onNotice?.('Passagem ocupada: a porta voltou a abrir.');}
+        else door.open=next;
+      }
+      const seat=this.seating;if(!seat)return;
+      seat.elapsed+=dt;
+      const c=seat.chair,anchor={x:c.x,z:c.z+c.facing*.035};
+      if(seat.phase==='sitting'){
+        const t=Math.min(1,seat.elapsed/1.05),move=ease((t-.18)/.82);
+        this.player.x=seat.start.x+(anchor.x-seat.start.x)*move;
+        this.player.z=seat.start.z+(anchor.z-seat.start.z)*move;
+        this.player.dir=turn(seat.start.dir,c.dir,ease(t/.32));
+        seat.blend=ease((t-.24)/.76);
+        if(t===1)seat.phase='seated';
+      }else if(seat.phase==='standing'){
+        const t=Math.min(1,seat.elapsed/.95),move=ease(t);
+        this.player.x=anchor.x+(seat.exit.x-anchor.x)*move;
+        this.player.z=anchor.z+(seat.exit.z-anchor.z)*move;
+        seat.blend=1-ease(t);
+        if(t===1){this.player.x=seat.exit.x;this.player.z=seat.exit.z;this.seating=null;}
+      }
+    }
     canMove(x,z){
       if(x < -12.05||x>16.2||z < -7.08||z>7.04)return false;
       const radiusSq=PLAYER_RADIUS*PLAYER_RADIUS;
+      for(const box of this.doorBoxes()){
+        if(Math.hypot(Math.max(Math.abs(x-box.x)-box.hx,0),Math.max(Math.abs(z-box.z)-box.hz,0))<PLAYER_RADIUS)return false;
+      }
       for(const box of WALK_BOXES){
         const nearX=Math.max(box.x-box.hx,Math.min(x,box.x+box.hx));
         const nearZ=Math.max(box.z-box.hz,Math.min(z,box.z+box.hz));
@@ -137,7 +223,7 @@
     cameraPointBlocked(x,y,z){
       const padding=this.cameraPadding;
       if([x,y,z].some((v,i)=>v<CAMERA_ROOM.min[i]+padding||v>CAMERA_ROOM.max[i]-padding))return true;
-      for(const box of WALL_BOXES){
+      for(const box of [...WALL_BOXES,...this.doorBoxes()]){
         if(y<box.top+padding&&Math.abs(x-box.x)<box.hx+padding&&Math.abs(z-box.z)<box.hz+padding)return true;
       }
       return false;
@@ -151,7 +237,7 @@
         if(d>0)limit=Math.min(limit,(CAMERA_ROOM.max[axis]-padding-from[axis])/d);
         else if(d<0)limit=Math.min(limit,(CAMERA_ROOM.min[axis]+padding-from[axis])/d);
       }
-      for(const wall of WALL_BOXES){
+      for(const wall of [...WALL_BOXES,...this.doorBoxes()]){
         const min=[wall.x-wall.hx-padding,-padding,wall.z-wall.hz-padding];
         const max=[wall.x+wall.hx+padding,wall.top+padding,wall.z+wall.hz+padding];
         let enter=0,leave=1;
@@ -178,8 +264,8 @@
       }
       return distanceSq<radius*radius;
     }
-    update(dt){this.t+=dt;let yaw=this.yaw;let speed=dt*3.6,dx=0,dz=0; if(this.keys.w||this.keys.arrowup){dx-=Math.sin(yaw);dz-=Math.cos(yaw)}if(this.keys.s||this.keys.arrowdown){dx+=Math.sin(yaw);dz+=Math.cos(yaw)}if(this.keys.a){dx-=Math.cos(yaw);dz+=Math.sin(yaw)}if(this.keys.d){dx+=Math.cos(yaw);dz-=Math.sin(yaw)}if(this.keys.arrowleft)this.yaw+=dt*1.65;if(this.keys.arrowright)this.yaw-=dt*1.65;
-      const moving=Math.hypot(dx,dz)>.01,controlAllowed=!this.paused&&!this.events.isBlocked?.();this.walking=false;
+    update(dt){this.t+=dt;if(!this.paused&&!this.events.isBlocked?.())this.updateFurniture(dt);let yaw=this.yaw;let speed=dt*3.6,dx=0,dz=0; if(this.keys.w||this.keys.arrowup){dx-=Math.sin(yaw);dz-=Math.cos(yaw)}if(this.keys.s||this.keys.arrowdown){dx+=Math.sin(yaw);dz+=Math.cos(yaw)}if(this.keys.a){dx-=Math.cos(yaw);dz+=Math.sin(yaw)}if(this.keys.d){dx+=Math.cos(yaw);dz-=Math.sin(yaw)}if(this.keys.arrowleft)this.yaw+=dt*1.65;if(this.keys.arrowright)this.yaw-=dt*1.65;
+      const moving=Math.hypot(dx,dz)>.01,controlAllowed=!this.paused&&!this.events.isBlocked?.()&&!this.seating;this.walking=false;
       if(moving&&controlAllowed){let n=Math.hypot(dx,dz);dx=dx/n*speed;dz=dz/n*speed;const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.12)),stepX=dx/steps,stepZ=dz/steps,startX=this.player.x,startZ=this.player.z;
         for(let i=0;i<steps;i++){if(this.canMove(this.player.x+stepX,this.player.z))this.player.x+=stepX;if(this.canMove(this.player.x,this.player.z+stepZ))this.player.z+=stepZ;}
         const movedX=this.player.x-startX,movedZ=this.player.z-startZ;
@@ -215,5 +301,5 @@
     loop(ts){requestAnimationFrame(this.loop);if(this.paused){this.last=ts;return;}let dt=Math.min(.038,Math.max(.008,(ts-this.last)/1000||.016));this.last=ts;this.update(dt);if(this.low){this.acc+=dt;if(this.acc<1/30)return;this.acc=0;}this.render();this.events.onFrame?.(this);}
     distance(x,z){return Math.hypot(this.player.x-x,this.player.z-z)}
   }
-  global.SCAI3D={Engine,colors:C};
+  global.SCAI3D={Engine,colors:C,chairs:CHAIRS};
 })(window);
