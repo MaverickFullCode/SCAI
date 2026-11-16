@@ -2,7 +2,7 @@
 
 Leia também [MEMORIA-DO-PROJETO.md](MEMORIA-DO-PROJETO.md) para o registro permanente da conversa de origem, metodologia e decisões visuais.
 
-Veja [os personagens da Versão Alfa 0.2](docs/personagens-realistas.md), aprovada e integrada à `main`, com capturas reais, materiais e validação. Os três modelos receberam rosto, cabelo, alfaiataria, mãos e materiais novos, com deformação das articulações na GPU. Para conferir os testes de geometria, animação e câmera, execute `node --test tests/personagens.test.cjs tests/camera.test.cjs`.
+Veja [os personagens da Versão Alfa 0.2](docs/personagens-realistas.md), aprovada e integrada à `main`, com capturas reais, materiais e validação. Os três modelos receberam rosto, cabelo, alfaiataria, mãos e materiais novos, com deformação das articulações na GPU. Para conferir os testes de geometria, animação, câmera e movimento, execute `node --test tests/personagens.test.cjs tests/camera.test.cjs tests/movimento.test.cjs`.
 
 **Entrada:** abrir `SCAI.html` no Chrome, Edge ou Firefox moderno. O jogo também pode ser servido por qualquer servidor estático (recomendado para distribuição), por exemplo `python -m http.server 8000` dentro da pasta SCAI e então acessar `http://localhost:8000/SCAI.html`.
 
@@ -21,6 +21,8 @@ Veja [os personagens da Versão Alfa 0.2](docs/personagens-realistas.md), aprova
 - `assets/` — imagens de apresentação e recursos do cenário tridimensional. As janelas usam um panorama distante e os objetos exploráveis usam malhas 3D.
 
 ## Controles
+
+Na ramificação de testes, um obstáculo na direção solicitada interrompe o passo e a animação de caminhada. Ao se afastar ou escolher uma direção livre, o auditor volta a caminhar imediatamente.
 
 No celular, os botões **Missão** e **Trabalho** abrem os respectivos painéis do topo, que começam recolhidos. Use ×, **Recolher** ou toque novamente no botão para fechá-los. A pergunta fica fixa durante a escolha das respostas. Veja as capturas e a validação em [Interface em celulares](docs/interface-celular.md).
 

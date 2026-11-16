@@ -181,7 +181,13 @@
     update(dt){this.t+=dt;let yaw=this.yaw;let speed=dt*3.6,dx=0,dz=0; if(this.keys.w||this.keys.arrowup){dx-=Math.sin(yaw);dz-=Math.cos(yaw)}if(this.keys.s||this.keys.arrowdown){dx+=Math.sin(yaw);dz+=Math.cos(yaw)}if(this.keys.a){dx-=Math.cos(yaw);dz+=Math.sin(yaw)}if(this.keys.d){dx+=Math.cos(yaw);dz-=Math.sin(yaw)}if(this.keys.arrowleft)this.yaw+=dt*1.65;if(this.keys.arrowright)this.yaw-=dt*1.65;
       const moving=Math.hypot(dx,dz)>.01,controlAllowed=!this.paused&&!this.events.isBlocked?.();this.walking=false;
       if(moving&&controlAllowed){let n=Math.hypot(dx,dz);dx=dx/n*speed;dz=dz/n*speed;const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.12)),stepX=dx/steps,stepZ=dz/steps,startX=this.player.x,startZ=this.player.z;
-        for(let i=0;i<steps;i++){if(this.canMove(this.player.x+stepX,this.player.z))this.player.x+=stepX;if(this.canMove(this.player.x,this.player.z+stepZ))this.player.z+=stepZ;}
+        for(let i=0;i<steps;i++){
+          const nextX=this.player.x+stepX,nextZ=this.player.z+stepZ;
+          // Test the requested direction as a whole. Splitting X/Z produced tiny
+          // sideways steps against obstacles, keeping the walking animation alive.
+          if(!this.canMove(nextX,nextZ))break;
+          this.player.x=nextX;this.player.z=nextZ;
+        }
         const movedX=this.player.x-startX,movedZ=this.player.z-startZ;
         const distanceMoved = Math.hypot(movedX,movedZ);
         if(distanceMoved>.001){
