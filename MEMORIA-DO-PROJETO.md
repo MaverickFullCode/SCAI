@@ -1,0 +1,81 @@
+# Memória do projeto SCAI
+
+Este arquivo preserva as decisões, requisitos e histórico útil da conversa compartilhada usada como base do projeto. O link era uma cópia compartilhada, que avisava não ser adicionada à memória da conta; esta é a memória persistente dentro do repositório.
+
+## Identidade e direção visual
+
+- Nome: **SCAI — Simulador de Cenários em Auditoria Independente**.
+- Jogo 3D real feito para navegador com HTML, CSS, JavaScript e WebGL; rejeitar cenários 2D e 2.5D.
+- Direção aprovada: **Clean Stylized 3D**, liso, sofisticado e semirrealista; geometria Low-to-Mid Poly; proporções reconhecíveis, cores corporativas harmoniosas, materiais simples e iluminação suave.
+- Aparência profissional, sem excesso de detalhe ou aspecto infantil. Personagens adultos, expressivos, otimistas e profissionais.
+- Pisos foscos, sem reflexos em tempo real. Controlar polígonos, materiais, transparências, sombras, resolução das texturas e chamadas de renderização para manter o desempenho em computadores, notebooks e celulares modestos.
+- Ambientes previstos: escritório de auditoria, centro de distribuição/galpão e sala de reunião de empresários. Referências visuais geradas por IA não substituem geometria navegável 3D.
+- Movimentação livre em terceira pessoa, teclado e controles de toque, câmera orbitável, interação com pontos/objetos e colisões. O corpo deve avançar olhando para a direção do movimento, sem parecer andar de costas.
+- Animações leves e reutilizáveis: ciclo simples de caminhada e boca abrindo/fechando independentemente das palavras; legendas carregam o diálogo.
+
+## Conteúdo e metodologia educacional (conforme texto do autor)
+
+O jogo é um simulador autoral de auditoria independente, centrado em amostragem e gestão do risco de auditoria, ensino de técnicas e decisão do relatório. Deve preservar a sensação de aprender, evoluir e aperfeiçoar-se com erros; o jogo mostra o que foi feito incorretamente.
+
+Há uma etapa de **aprendizado** (conceitos introdutórios de cada técnica e como jogar) e outra de **treino**. O treino de cada empresa tem quatro partes: entrevista, gestão de risco, execução dos procedimentos e emissão da opinião final.
+
+1. **Entrevista:** o empresário apresenta o problema. O estudante investiga e direciona a procura, compreende a situação e considera a dimensão humana/social, sem abandonar independência e evidência.
+2. **Gestão de risco:** selecionar técnicas, metas e prioridades dentro de pontos técnicos limitados. A amostragem representa segurança razoável com recursos de tempo e pessoal limitados. Metas são orientação, não obrigação; podem ser revistas à medida que surgem fatos.
+3. **Execução:** as técnicas escolhidas determinam quais locais/procedimentos podem ser acessados. Técnica com meta zero não pode ser usada sem mudança formal do plano. O plano deve ser seguido, permitindo apenas poucas alterações justificadas.
+4. **Relatório:** escolher um dos quatro modelos: parecer sem ressalva/opinião não modificada, parecer com ressalva/opinião com ressalva, parecer adverso/opinião adversa ou abstenção de opinião.
+5. **Avaliação:** comparar esperado e realizado e explicar erros. Falha grave se a opinião final estiver errada ou se a cobertura dos métodos corretos for inferior a 70%; acertar a opinião ao acaso não basta.
+
+Os cenários podem ser reutilizados. Mudam nome da empresa, história da entrevista e problemas contábeis. Deve haver quatro empresas/casos — um por modelo de relatório —, sorteados aleatoriamente sem repetição; uma missão recomeça se falhar.
+
+## Escopo inicial autorizado
+
+O autor pediu uma fase Alpha/Beta introdutória para provar a viabilidade visual e mecânica; um arquivo central `SCAI.html`; cada fase num HTML próprio; ativos sob `assets/`; arquivos de motor/interface ao lado de `assets/`; instalação persistente em `C:\PROJETOS\SCAI` e autorizou criação e edição nesse caminho.
+
+O protótipo anterior chamou-se Alpha 0.1 e implementava o caso fictício **Aurora Distribuição S.A. — Auditoria de Estoques**, opinião com ressalva, 5 técnicas, 12 pontos, entrevista, execução, relatório e feedback; apenas um dos quatro casos. Informava que a arte do mundo jogável era mais simples que as imagens de referência, não validava celular físico e não incluía o sorteio das quatro empresas.
+
+## Histórico da conversa e decisões registradas
+
+- A conversa iniciou perguntando se o conceito era possível com imagens de IA, HTML/CSS/JS e desenvolvimento fase a fase. A primeira recomendação mencionou 2.5D, mas o autor corrigiu explicitamente: quer 3D verdadeiro; essa preferência prevalece.
+- O autor aprovou os estilos de referência do galpão e escritório; pediu melhorar a sala de reunião e detalhar o personagem sem exagero, com otimismo e profissionalismo.
+- A identidade recebeu o nome Clean Stylized 3D (também descrita como Clean Stylized Semi-Realistic 3D), com modelagem Low-to-Mid Poly, materiais suaves, iluminação discreta e formas corporativas.
+- O autor pediu gerar novamente quatro referências iniciais (três cenários e personagem) nesse estilo e sem reflexos no chão. Este requisito visual se aplica à produção gráfica.
+- O autor definiu metodologia educacional detalhada acima e pediu fase de teste executável, fase por arquivo HTML e pasta de assets.
+- O diretório final foi confirmado como `C:\PROJETOS\SCAI`; o autor autorizou criação e edição ali. A conversa original não tinha acesso local, mas este projeto agora está nesse diretório do Codex.
+- A cópia compartilhada está acessível em: https://chatgpt.com/share/6af97a2a-1d74-83e8-9edf-15852d55230a (capturada em 2026-11-15). O texto da conversa foi lido integralmente para formar esta memória.
+
+## Estado atual após o upgrade visual
+
+O upgrade da fase Aurora foi integrado com arquitetura e mobiliário novos em `assets/cenario.js`, malhas suaves em `assets/malha.js`, três personagens articulados em `assets/personagens.js` e o renderizador, materiais e iluminação em arquivos próprios. O atlas de oito superfícies e o panorama foram gerados com ImageGen e incorporados aos scripts para funcionar também ao abrir o HTML localmente. Placas, telas e documentos usam um atlas gráfico com textos em português.
+
+O escritório recebeu cadeiras estofadas, tampos com bordas arredondadas, armários, documentos, computadores, plantas e janelas com vista externa. O galpão recebeu quatro níveis de estantes, paletes, embalagens variadas, tambores, empilhadeira, doca e estrutura de teto. Os marcadores de estado continuam ancorados ao piso. A entrevista usa a posição do auditor diante do gestor, do outro lado da mesa. A câmera considera as novas alturas dos objetos e oculta o auditor quando muito próxima.
+
+A retomada após a interrupção corrigiu a transformação que faltava para os dentes do personagem. A fala continua a 30 caracteres por segundo, sincronizada ao tempo decorrido para acompanhar atrasos de renderização. O feedback é instantâneo. O painel permanece em 25% da altura e usa 16 px na fala e nas opções. O orçamento, os exames fora do plano e as mudanças de plano foram preservados.
+
+Abertura pelo menu e pela fase direta, renderização com WebGL e percurso completo até relatório aprovado foram conferidos no Edge. O teste com duas técnicas inicialmente fora do plano e repetições debitou somente os custos dos exames, chegou a 12 PT consumidos e registrou cinco mudanças de plano. Marcadores relevantes ficaram verdes. A cena rodou perto de 60 FPS em 1180 × 756 com Intel UHD Graphics neste computador. O layout foi conferido em viewport de celular, ainda sem medição em aparelho físico.
+
+## Histórico da revisão inicial
+
+A estrutura esperada existe (`SCAI.html`, estilos/scripts centrais, `engine3d.js`, `assets/` e `fases/fase01.*`). O motor WebGL desenha geometrias low-poly e o jogo tem fluxos de entrevista, planejamento, execução e relatório. Os arquivos `.webp` são ilustrações/referências; não são modelos 3D. Na revisão de 2026-11-15, foi corrigido o cálculo do giro horizontal do auditor, opostos o balanço de pernas e braços, acrescentados detalhes nos personagens/cenário e um atlas UV de oito materiais gerados por Canvas (papelão, madeira, metal/tecido, folhagem, parede, piso, borracha e cerâmica/pele). As formas do personagem foram arredondadas e o rosto/roupa receberam detalhes de olhos, nariz, lapelas, gravata, botões e identificação. A câmera da entrevista agora enquadra de perto Marcos pela frente e oculta os outros modelos durante a fala para que o auditor não cubra o rosto; volta à terceira pessoa quando a conversa termina. A segunda fala responde à primeira decisão do aluno. As cadeiras da sala de reunião e do escritório apontam para as mesas. A entrevista usa faixa inferior de 25% da tela; a fala do gestor é digitada a 30 caracteres por segundo; o retorno pedagógico aparece instantaneamente. As opções só aparecem quando a fala de Marcos termina; a boca anima nesse mesmo intervalo e não há corte/atendimento antecipado. O retorno pedagógico aparece instantaneamente sem movimento da boca. O teto anteriormente aberto foi substituído por cobertura alta a 6,18 unidades, painéis, juntas, estrutura de suporte, luzes embutidas e clerestório; as paredes foram elevadas para fechar o ambiente. Foram aprovados `node --check` nos scripts, inicialização/renderização em mock WebGL (28.308 vértices estáticos) e conferência do rosto do gestor dentro dos 75% superiores do viewport da conversa. A fase contém somente a Aurora; os outros casos e o sorteio ainda não existem. A abertura local para inspeção visual foi bloqueada pela política de URL do navegador, então a renderização em hardware real ainda precisa de conferência manual. Atualizar este estado quando houver novas mudanças.
+
+## Próximos passos de produto
+
+- Consolidar uma fase Alpha jogável e verificável, corrigindo orientação/ciclo de passos e melhorando personagens, objetos, materiais e apresentação da sala de reunião no mesmo padrão artístico.
+- Criar/usar assets visuais coerentes (cenários, personagens, objetos e materiais) sem implicar que imagens 2D são geometria 3D.
+- Acrescentar os três casos e sorteio aleatório sem repetição; garantir repetição do caso quando falhar.
+- Persistir o progresso e evoluir os conteúdos didáticos; revisar terminologia e conteúdo técnico com fontes normativas antes de uso curricular.
+- Revisar o desempenho visual em navegadores e celulares reais.
+
+## Correção posterior
+
+- Removida a travessa baixa que atravessava a passagem central escritório–galpão a aproximadamente 2,85 unidades de altura e colidia visualmente com a cabeça do auditor. Um mock do mesh estático confirmou que não restam vértices na abertura central entre 2,4 e 3,2 unidades de altura.
+- A câmera de terceira pessoa agora verifica o braço entre o foco e a posição desejada, recua até o ponto livre mais distante perto de paredes, da divisória, de estantes, mesas ou empilhadeira e fica dentro dos limites interiores, sem ver o exterior. Quando muito perto, o modelo do auditor é ocultado para evitar que cubra a imagem. Cenários mock em espaço aberto, parede frontal, parede lateral e divisória central foram conferidos; o zoom manteve o braço sem interseção.
+- A rotação do corpo agora também se aplica à geometria dos elipsoides do personagem, para que cabelo, cabeça, olhos, nariz, boca, roupa e membros acompanhem a orientação corporal em vez de manterem seus eixos no mundo. A fala do gestor passou para 30 caracteres por segundo; o feedback aparece instantaneamente; as respostas usam o mesmo tamanho visual das perguntas.
+- Correção posterior: a fala do gestor agora agenda cada caractere por prazo monotônico a 30 cps, enquanto o feedback pedagógico aparece instantaneamente, sem pausa extra por pontuação; os arquivos da fase recebem versão na URL para impedir que a execução reutilize o JS/CSS antigo. Perguntas e opções compartilham fonte explícita de 16 px. A locomoção usa raio do auditor, colisões circulares/retangulares para paredes internas, mesas, cadeiras, estantes, paletes, empilhadeira, bancada, terminal, plantas e personagens, além de subdividir deslocamentos para evitar atravessamento em passos rápidos.
+- Créditos da fase 01: metas no plano são valores alocados e não reduzem o saldo; somente testes efetivamente concluídos debitam seu próprio custo do orçamento de 12 PT. Testes além da meta ou com meta zero ficam disponíveis enquanto restar saldo suficiente; concluir um deles soma +1 ao contador de mudanças de plano, sem aumentar créditos nem alterar a verba. O botão contextual informa que executa o teste e registra a mudança, permanece visível com saldo positivo (desabilitado se aquele teste custar mais que o saldo) e some quando o saldo zerar. Painéis e relatórios separam alocado, consumido e saldo.
+- O botão “Localizar objetivo” deixou de teleportar. Na execução, seleciona uma meta planejada ainda incompleta que caiba no saldo; depois prioriza técnicas relevantes ainda não testadas e por fim as demais ainda não testadas. Escolhe por proximidade e gira corpo/câmera na direção do objetivo. Metas concluídas são ignoradas; sem saldo, informa que o relatório pode ser emitido.
+- Removidos os botões HTML projetados sobre os pontos do cenário e sua atualização de posição na tela a cada giro. Os pontos de interação agora usam fichas 3D baixas, fixas na geometria do piso em suas coordenadas de ação; a câmera não billboarda nem altera a orientação delas. O nome e o botão de ação aparecem apenas no painel HUD fixo quando o auditor está próximo. Cache do app/fase versionado para carregar essa mudança.
+- As fichas de objetivo usam laranja enquanto pendentes e verde ao concluir a meta da técnica; a ficha da entrevista conclui quando o estágio sai da entrevista. O alvo de conversa foi reposicionado para a frente do gestor, no lado oposto da mesa, usando a mesma coordenada para a orientação, proximidade e marcador.
+- O ciclo de caminhada foi corrigido para elevar e avançar o pé na direção frontal do corpo. A fase da passada acompanha a distância efetivamente percorrida, com apoio do pé e flexão do joelho resolvidos no esqueleto. O pé apoiado mantém a posição no chão durante o avanço do corpo. Foram conferidos o ciclo de perfil no Edge, a parada e as teclas WASD em quatro orientações de câmera.
+- A caminhada mantém agora a altura do quadril e a postura ereta usadas em pé. O deslocamento vertical e a inclinação frontal exclusivos da caminhada foram removidos. A passada e o alcance das pernas foram ajustados para sustentar essa altura, com o tamanho dos sapatos preservado. Os testes confirmaram altura constante do quadril, apoio dos pés e avanço correto, além da conferência visual no Edge.
+- O colarinho foi reconstruído com faixa ajustada à base do pescoço, dobra traseira e duas pontas frontais ligadas à camisa. A malha visível da camisa foi limitada à abertura do paletó para eliminar os trechos claros que atravessavam as lapelas, e a região superior do paletó recebeu maior definição. O encaixe foi conferido de frente, de perfil e por trás nos três personagens no Edge.
+- A interface da fase e a barra do jogador bloqueiam seleção de texto, arraste e menu de copiar por toque prolongado, incluindo setas, giro e missão. Os controles rastreiam cada dedo e liberam os comandos ao soltar, cancelar, perder a captura ou sair do jogo; a câmera também encerra o arraste cancelado. Campos de formulário e rolagem dos painéis foram preservados. Toque contínuo, movimento e giro simultâneos, cancelamento e rolagem foram conferidos no Edge com emulação de celular e tablet; ainda sem teste em aparelho físico.
