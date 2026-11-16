@@ -217,12 +217,6 @@
       // Shallow, naturally dark nostrils just under the wings of the nose.
       m.surface((u,v)=>{const a=TAU*u,r=v*.999+.001,x=s*.025+r*.006*sin(a),y=2.778+.0017*r*cos(a)-s*(x-s*.025)*.16;
         return[x,y,faceZ(x,y)-.0006];},16,3,blend(P.lip,col('664537'),.4),skin);
-      if(manager){
-        for(const [y,w,bend] of [[2.839,.086,-.005],[2.918,.086,.009],[2.756,.035,-.008]]){
-          const p=t=>{const x=s*((y<2.8?.044:.042)+w*t),yy=y+bend*sin(Math.PI*t)+(y<2.8?-.026*t:0);return[x,yy,faceZ(x,yy)-.0009];};
-          m.tube(p,t=>.0002+.0009*sin(Math.PI*t),blend(shadow,P.skin,.48),skin,14,5);
-        }
-      }
     }
     if(manager){
       // Marcos is recognizable in the interview by his greying boxed beard and
