@@ -608,7 +608,7 @@
     rig.teeth=multiply(rig.head,teeth);
     for(const side of ['L','R']){
       // Use elapsed real time so the simulation's frame cap cannot slow blinking.
-      const blinkTime=(blinkClock+roleOffset+1.8+(side==='R'?.012:0))%4;
+      const blinkTime=(blinkClock+roleOffset+1.8+(side==='R'?.012:0))%2;
       const blink=smooth(0,.075,blinkTime)*(1-smooth(.075,.205,blinkTime));
       rig['eyelid'+side]=multiply(rig.head,transform(0,-.033*blink,-.020*blink));
     }

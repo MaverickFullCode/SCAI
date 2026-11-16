@@ -156,7 +156,7 @@ test('polegar da mão direita nasce na palma e apoia o tablet sem atravessá-lo'
   assert.ok(thumb.some(([x,y])=>x>.378&&y>1.48&&y<1.52),'a ponta deve apoiar a face interna do tablet');
 });
 
-test('ambos os olhos piscam a cada 4 segundos mesmo com a simulação parada',()=>{
+test('ambos os olhos piscam a cada 2 segundos mesmo com a simulação parada',()=>{
   for(const role of ['auditor','manager','worker'])for(const side of ['L','R']){
     const blinks=[];let previouslyClosed=false;
     for(let frame=0;frame<=14*60;frame++){
@@ -165,7 +165,7 @@ test('ambos os olhos piscam a cada 4 segundos mesmo com a simulação parada',()
       if(closed&&!previouslyClosed)blinks.push(clock);
       previouslyClosed=closed;
     }
-    assert.ok(blinks.length>=3,`${role}, ${side}: ${blinks}`);
-    for(let i=1;i<blinks.length;i++)assert.ok(Math.abs(blinks[i]-blinks[i-1]-4)<.020,`${role}, ${side}: ${blinks}`);
+    assert.ok(blinks.length>=6,`${role}, ${side}: ${blinks}`);
+    for(let i=1;i<blinks.length;i++)assert.ok(Math.abs(blinks[i]-blinks[i-1]-2)<.020,`${role}, ${side}: ${blinks}`);
   }
 });
