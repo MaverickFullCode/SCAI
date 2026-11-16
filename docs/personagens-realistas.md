@@ -6,11 +6,11 @@ Implementação em `codex/teste-nova-implementacao`, baseada na referência de a
 
 ## O que mudou
 
-- Rosto com proporções revistas, ponte e asas do nariz esculpidas, maçãs do rosto, olhos amendoados, íris texturizada, lábios, dentes e sorriso.
+- Rosto com o comprimento e a proporção da versão anterior ao experimento, mantendo ponte e asas do nariz esculpidas, maçãs do rosto, olhos amendoados e íris texturizada. A expressão de repouso é neutra, com lábios fechados; os dentes são revelados somente durante a fala.
 - Cabelo com volume penteado, relevo de mechas e microtextura. Marcos conserva os fios grisalhos e a barba aparada; o operador conserva o capacete e o colete.
 - Paletó e calças com superfícies contínuas nas articulações, pregas discretas, lapelas com dobra, bolsos, costuras e colarinho ajustado. Sapatos com acabamento de couro e cadarços; cinto com fivela retangular.
-- Mãos com dedos, unhas e polegar; o auditor segura o tablet junto ao corpo com a mão e o objeto ligados ao mesmo antebraço.
-- Deformação por dois ossos nos cotovelos, joelhos, quadril e pescoço. Mandíbula e lábio acompanham a fala; as pálpebras piscam durante a animação de repouso.
+- Mãos com dedos, unhas e polegar; o auditor voltou a carregar o tablet fino na pose original, verticalmente ao lado da coxa, com a mão e o objeto ligados ao mesmo antebraço. O polegar contorna a borda superior.
+- Deformação por dois ossos nos cotovelos, joelhos, quadril e pescoço. Mandíbula e lábio acompanham a fala e voltam à boca fechada quando ela termina; as pálpebras piscam durante a animação de repouso.
 - Iluminação própria dos personagens em espaço linear, com resposta diferente para pele, cabelo, tecido, couro, metal e olhos. O cenário mantém a iluminação existente.
 
 ![Elenco renderizado para inspeção dos modelos](previa-elenco.png)
@@ -27,7 +27,7 @@ Foi usado o modo integrado da habilidade `imagegen`. A imagem gerada foi codific
 
 ## Validação
 
-`node --test tests/personagens.test.cjs` verifica nove casos: integridade das malhas e influências do esqueleto para cada personagem, poses finitas ao girar/caminhar/falar, apoio do pé durante o avanço, solas acima do chão e altura da postura/ancoragem do tablet. Os modelos usam índices de 16 bits no WebGL 1 e um desenho por personagem.
+`node --test tests/personagens.test.cjs` verifica 16 casos: integridade das malhas e influências do esqueleto para cada personagem, poses finitas ao girar/caminhar/falar, comprimento preservado do rosto, boca fechada em repouso e animada na fala, apoio do pé durante o avanço, solas acima do chão, altura da postura, ancoragem do tablet e sua posição abaixo da cintura. Os modelos usam índices de 16 bits no WebGL 1 e um desenho por personagem.
 
 A fase foi aberta diretamente e pelo menu no Edge com WebGL real. A missão foi percorrida até o resultado aprovado, incluindo entrevista a 30 caracteres por segundo, feedback instantâneo, execução de testes fora do plano e cinco mudanças de plano sem criar créditos. Os três personagens foram conferidos de frente, de perfil e por trás; caminhada, fala e piscada foram renderizadas sem erro de WebGL. O layout móvel foi conferido com emulação, com fonte de 16 px e faixa de diálogo de 25% da altura.
 

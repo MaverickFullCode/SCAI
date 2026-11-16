@@ -37,6 +37,34 @@ for(const role of ['auditor','manager','worker']){
       }
     }
   });
+  test(`${role}: rosto mantém o comprimento anterior ao experimento`,()=>{
+    const model=people.build(role),skin=[];
+    for(let i=0;i<model.data.length;i+=model.stride){
+      if(model.data[i+9]===1&&model.data[i+11]===model.bones.indexOf('head'))skin.push(model.data[i+1]);
+    }
+    const height=Math.max(...skin)-Math.min(...skin);
+    assert.ok(Math.abs(height-(role==='manager'?.50436:.48568))<.00001,`altura do rosto ${height}`);
+  });
+  test(`${role}: boca neutra em repouso, animada somente na fala`,()=>{
+    let talkingLip=0,talkingTeeth=0;
+    const level=2.84+(2.724-2.84)*(role==='manager'?1.08:1.04);
+    const upper=[0,level,-.18],lower=[0,level-.020,-.18];
+    for(const time of [.07,.21,.44,.61,.8,1.1,2.3]){
+      for(const walking of [false,true]){
+        const rest=people.pose(0,0,time,walking,role,.7,false,time*3.6);
+        assert.ok(distance(point(rest.lip,upper),point(rest.head,upper))<.000001);
+        assert.ok(distance(point(rest.jaw,upper),point(rest.head,upper))<.000001);
+        for(const bone of ['mouth','teeth']){
+          assert.ok(distance(point(rest[bone],lower),point(rest[bone],upper))<.00015);
+        }
+      }
+      const speech=people.pose(0,0,time,false,role,.7,true);
+      talkingLip=Math.max(talkingLip,distance(point(speech.lip,upper),point(speech.head,upper)));
+      talkingTeeth=Math.max(talkingTeeth,distance(point(speech.teeth,lower),point(speech.teeth,upper)));
+    }
+    assert.ok(talkingLip>.008,'o lábio precisa acompanhar a fala');
+    assert.ok(talkingTeeth>.010,'os dentes só são revelados durante a fala');
+  });
 }
 
 test('o pé apoiado fica no lugar enquanto o corpo avança',()=>{
@@ -74,4 +102,18 @@ test('caminhar mantém a altura da postura e o tablet ancorado à mão',()=>{
     assert.ok(Math.abs(point(rig.body,[0,1.66,0])[1]-1.66)<.004);
     assert.ok(distance(point(rig.handR,[.456,1.595,-.055]),point(rig.tablet,[.456,1.595,-.055]))<.000001);
   }
+});
+
+test('tablet fica vertical ao lado da coxa na pose original',()=>{
+  const model=people.build('auditor'),tablet=model.bones.indexOf('tablet'),vertices=[];
+  for(let i=0;i<model.data.length;i+=model.stride){
+    if(model.data[i+11]===tablet)vertices.push(Array.from(model.data.slice(i,i+3)));
+  }
+  const span=axis=>Math.max(...vertices.map(p=>p[axis]))-Math.min(...vertices.map(p=>p[axis]));
+  assert.ok(span(0)<.035,'a face larga do tablet não deve apontar para a câmera frontal');
+  assert.ok(span(1)>.43&&span(1)<.45);
+  assert.ok(span(2)>.28&&span(2)<.30);
+  const rig=people.pose(0,0,.5,false,'auditor',0,false);
+  const heights=vertices.map(p=>point(rig.tablet,p)[1]);
+  assert.ok(Math.min(...heights)>1.05&&Math.max(...heights)<1.75,'o tablet deve ficar abaixo da cintura');
 });

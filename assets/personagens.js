@@ -14,6 +14,8 @@
   const bones=['body','head','jaw','mouth','lip','teeth','thighL','shinL','footL','thighR','shinR','footR','armL','foreL','handL','armR','foreR','handR','tablet','eyelidL','eyelidR'];
   const boneIndex=Object.fromEntries(bones.map((name,index)=>[name,index]));
   const smooth=(a,b,x)=>{const t=clamp((x-a)/(b-a));return t*t*(3-2*t);};
+  const headHeight=(y,role)=>2.84+(y-2.84)*(role==='manager'?1.08:1.04);
+  const mouthHeight=2.724;
   function weights(name,p,u,v) {
     const y=p[1],side=name.at(-1);
     if(name.startsWith('eyelid'))return[boneIndex.head,boneIndex[name],(1-v)*Math.max(0,sin(Math.PI*u))**.48];
@@ -47,12 +49,13 @@
       if(!this.chunks.has(name))this.chunks.set(name,{vertices:[],indices:[]});
       const chunk=this.chunks.get(name);this.out=chunk.vertices;this.indices=chunk.indices;this.name=name;
     }
-    surface(fn,nu,nv,c,mat,flip=false){
+    surface(fn,nu,nv,c,mat,flip=false,influence){
       const grid=[],ep=.00012;
       for(let j=0;j<=nv;j++)for(let i=0;i<=nu;i++){
         const u=i/nu,v=j/nv,p=fn(u,v),du=sub(fn(clamp(u+ep),v),fn(clamp(u-ep),v)),dv=sub(fn(u,clamp(v+ep)),fn(u,clamp(v-ep)));
         let n=unit(flip?cross(du,dv):cross(dv,du));if(Math.hypot(...n)<.5)n=[0,v>.5?1:-1,0];
-        const color=typeof c==='function'?c(u,v,p):c;grid.push([...p,...n,...color,mat,0,...weights(this.name,p,u,v),u,v]);
+        const color=typeof c==='function'?c(u,v,p):c;
+        grid.push([...p,...n,...color,mat,0,...(influence?influence(p,u,v):weights(this.name,p,u,v)),u,v]);
       }
       const w=nu+1,offset=this.out.length/16;
       for(const vertex of grid)this.out.push(...vertex);
@@ -81,14 +84,12 @@
       let offset=0,indexOffset=0;
       for(const [bone,chunk] of this.chunks){
         const a=chunk.vertices;
-        if(role==='auditor'&&bone==='handR'){
-          for(let i=0;i<a.length;i+=16)a[i]+=.040*(1-smooth(1.565,1.626,a[i+1]));
-        }
         if(['head','mouth','lip','teeth','eyelidL','eyelidR'].includes(bone)){
-          const sx=role==='manager'?.96:.93,sy=role==='manager'?.98:.94,sz=.98;
+          // Match the approved face length and aspect ratio from the original rig.
+          const sx=role==='auditor'?.90:.94,sy=role==='manager'?1.08:1.04;
           for(let i=0;i<a.length;i+=16){
-            a[i]*=sx;a[i+1]=2.63+(a[i+1]-2.63)*sy;a[i+2]*=sz;
-            a[i+3]/=sx;a[i+4]/=sy;a[i+5]/=sz;
+            a[i]*=sx;a[i+1]=headHeight(a[i+1],role);
+            a[i+3]/=sx;a[i+4]/=sy;
           }
         }
         parts.push({bone,first:indexOffset,count:chunk.indices.length});data.set(a,offset);
@@ -104,7 +105,7 @@
     const manager=role==='manager',worker=role==='worker';
     // Asymmetric cranium, wide cheekbones, narrow chin and the brow, eye sockets, muzzle,
     // nose bridge/alae and chin sculpted into the face itself (no separate nose sphere).
-    const rows=[[2.630,.027,.047,-.049],[2.65,.111,.115,-.036],[2.70,.159,.146,-.018],[2.77,.185,.159,-.002],[2.86,.194,.169,.005],[2.96,.187,.164,.010],[3.028,.151,.139,.019],[3.071,.082,.094,.023],[3.086,.004,.006,.025]];
+    const rows=[[2.619,.027,.047,-.049],[2.65,.111,.115,-.036],[2.70,.159,.146,-.018],[2.77,.185,.159,-.002],[2.86,.194,.169,.005],[2.96,.187,.164,.010],[3.028,.151,.139,.019],[3.071,.082,.094,.023],[3.086,.004,.006,.025]];
     function shape(y){const [w,d,z]=sample(rows,y);return[w*(manager?1.065:worker?1.035:1),d,z];}
     const sc=(x,y)=>-.032*gauss(x,y,0,2.837,.024,.076)-.043*gauss(x,y,0,2.796,.029,.024)
       -.020*(gauss(x,y,.029,2.783,.015,.012)+gauss(x,y,-.029,2.783,.015,.012))
@@ -185,25 +186,26 @@
         const x=s*(.001+.071*u),y=arch(2.758,2.746,.003,u)-v*(.005+.004*sin(Math.PI*u));
         return[x,y,faceZ(x,y)-.001-.002*sin(v*Math.PI)];},24,6,(u,v)=>blend(pepper,salt,.25+.11*sin(u*51+v*4)**2),hair,s>0);
     }
-    const lipW=manager?.070:.075,smile=x=>2.727+(manager?.011:.018)*(x/lipW)**2;
+    const lipW=manager?.070:.071,seam=x=>mouthHeight+.001*(x/lipW)**2;
     function lips(part){m.bone(part==='bottom'?'lip':part==='inside'?'mouth':'head');m.surface((u,v)=>{
-      const k=u*2-1,x=k*lipW,r=Math.max(0,1-k*k),base=smile(x);
-      let y;if(part==='inside')y=base+lerp(-.010,.005,v)*r;
-      else if(part==='bottom')y=base-r*(.010+.006*(1-v));
-      else y=base+r*(.005+v*(.005+.003*Math.exp(-((Math.abs(k)-.27)**2)/.033)));
-      const z=faceZ(x,y)-(part==='inside'?.005:.008+(part==='bottom'?.004:.002)*sin(Math.PI*v))*r;
-      return[x,y,z];},32,8,part==='inside'?col('633d36'):blend(P.skin,P.lip,part==='bottom'?.40:.34),skin);}
+      const k=u*2-1,x=k*lipW,r=Math.max(0,1-k*k),base=seam(x);
+      let y;if(part==='inside')y=base+lerp(-.027,.0005,v)*r;
+      else if(part==='bottom')y=base-r*.010*(1-v);
+      else y=base+r*v*(.007+.003*Math.exp(-((Math.abs(k)-.27)**2)/.033));
+      const z=faceZ(x,y)-(part==='inside'?.002:.007+(part==='bottom'?.003:.002)*sin(Math.PI*v))*r;
+      return[x,y,z];},32,8,part==='inside'?col('583637'):blend(P.skin,P.lip,part==='bottom'?.49:.44),skin,false,
+        part==='upper'?()=>[boneIndex.head,boneIndex.head,0]:undefined);}
     lips('upper');lips('inside');lips('bottom');
     m.bone('teeth');m.surface((u,v)=>{
-      const k=u*2-1,x=k*lipW*.89,r=1-k*k,y=smile(x)+lerp(-.007,.004,v)*r;
-      return[x,y,faceZ(x,y)-.007*r-.001];
+      const k=u*2-1,x=k*lipW*.85,r=1-k*k,y=seam(x)+lerp(-.007,-.001,v)*r;
+      return[x,y,faceZ(x,y)-.004*r];
     },48,6,(u,v)=>{
       const edge=Math.abs(sin((u-.5)*Math.PI*8))**24;
       return blend(col('f1e5ce'),col('bca78d'),.13*edge+.10*(1-v));
     },enamel);
     for(const s of [-1,1]){
       m.bone('head');
-      m.tube(t=>{const x=s*(lipW+.004*t),y=smile(s*lipW)+.006*t;return[x,y,faceZ(x,y)-.001];},t=>.0007*(1-t),blend(P.lip,P.skin,.24),skin,9,5);
+      m.tube(t=>{const x=s*(lipW+.003*t),y=seam(s*lipW)-.001*t;return[x,y,faceZ(x,y)-.001];},t=>.0005*(1-t),blend(P.lip,P.skin,.45),skin,9,5);
     }
     m.bone('head');
     // Interpolate the hand-cut hairline around temples and ears. A crescent of
@@ -413,7 +415,13 @@
         m.ell(s*(xx+.010),y+.024,z-.052,.0025,.011,.009,blend(P.skin,col('f2d6bb'),.48),enamel,12,8);
         m.tube(t=>[s*(xx+.014),y+.050+.0015*sin(t*Math.PI),z-.065+.018*t],.0006,blend(P.lip,P.skin,.62),skin,7,4);
       }
-      m.tube(t=>[s*(.432-.018*sin(Math.PI*t)+.014*t),1.535-.080*t,-.109-.025*sin(Math.PI*t*.9)],t=>.005+.016*sin(Math.PI*(.12+.79*t)),skinC,skin,20,14);
+      if(role==='auditor'&&s>0){
+        // Wrap the thumb over the top edge instead of through the folio's panel.
+        m.tube(t=>[.426+.031*cos(Math.PI*t),1.60+.064*Math.max(0,sin(Math.PI*t))**.45,-.110-.020*sin(Math.PI*t)],
+          t=>.005+.016*sin(Math.PI*(.12+.79*t)),skinC,skin,24,14);
+      }else{
+        m.tube(t=>[s*(.432-.018*sin(Math.PI*t)+.014*t),1.535-.080*t,-.109-.025*sin(Math.PI*t*.9)],t=>.005+.016*sin(Math.PI*(.12+.79*t)),skinC,skin,20,14);
+      }
       if(!worker&&s<0){
         m.bone('fore'+side);
         loft([[1.576,.062,.069,.456,-.058],[1.59,.064,.07,.456,-.058],[1.607,.064,.07,.455,-.056]],P.leather,leather,18,5);
@@ -422,14 +430,17 @@
       }
       if(role==='auditor'&&s>0){
         m.bone('tablet');
-        const tx=.409,ty=1.715,tz=-.090;
-        const point=(a,r,z)=>[tx+r*.154*Math.sign(sin(a))*Math.abs(sin(a))**.23,ty+r*.239*Math.sign(cos(a))*Math.abs(cos(a))**.23,z];
-        m.surface((u,v)=>point(u*TAU,.992+.008*sin(v*Math.PI),tz+lerp(-.012,.012,v)),80,8,col('727c89'),metal);
-        for(const side of [-1,1])m.surface((u,v)=>point(u*TAU,.0001+v*.992,tz+side*.012),80,8,side<0?col('343b48'):col('202b3b'),leather,side>0);
-        m.ell(tx-.119,ty+.202,tz-.013,.012,.012,.0018,col('19212c'),metal,18,10);
-        m.ell(tx-.119,ty+.202,tz-.015,.005,.005,.001,col('41627c'),enamel,14,8);
-        m.ell(tx,ty+.018,tz-.013,.020,.023,.0006,col('4d5766'),metal,18,10);
-        m.tube(t=>[tx+.155,ty+.08+.045*t,tz],.002,col('9ca5b0'),metal,6,6);
+        // Original slim folio, carried vertically beside the thigh in the palm.
+        const tx=.420,ty=1.418,tz=-.065;
+        const shapes=[[0,.962],[.10,.989],[.24,1],[.76,1],[.91,.988],[1,.963]];
+        const point=(a,r,x)=>{
+          const yy=sin(a),zz=cos(a);
+          return[x,ty+r*.218*Math.sign(yy)*Math.abs(yy)**.22,tz+r*.144*Math.sign(zz)*Math.abs(zz)**.22];
+        };
+        m.surface((u,v)=>point(u*TAU,sample(shapes,v)[0],tx+lerp(-.012,.012,v)),48,6,col('586372'),metal);
+        for(const side of [-1,1])m.surface((u,v)=>point(u*TAU,.0001+v*.966,tx+side*.012),48,4,side>0?col('3b4656'):col('354054'),leather,side<0);
+        m.ell(tx+.013,ty+.180,tz+.098,.004,.013,.013,col('202736'),metal,12,8);
+        for(let i=0;i<3;i++)m.ell(tx+.013,ty-.055+.005*i,tz-.032+.010*i,.0018,.010+.006*i,.003,col('8195a8'),metal,8,5);
       }
     }
   }
@@ -477,10 +488,12 @@
     rig.body=joint(multiply(root,transform(0,.003*breath,0)),[0,1.66,0],0,-sin(phase)*.055*w,cos(phase)*.013*w);
     rig.head=joint(rig.body,[0,2.58,0],-.013*breath+.018*sin(t*5)*answer,.029*sin(t*.66)+.033*sin(t*2.5)*answer,.006*sin(t*.94));
     const vis=answer*(.4+.33*sin(t*19)+.20*sin(t*29+1)+.07*sin(t*42)),op=Math.max(0,vis);
-    rig.jaw=joint(rig.head,[0,2.785,.028],-.088*op);
-    const open=identity();open[5]=1+1.65*op;open[13]=2.741*(1-open[5]);
+    rig.jaw=joint(rig.head,[0,headHeight(2.785,role),.028],-.088*op);
+    const reveal=smooth(.025,.18,op),level=headHeight(mouthHeight,role);
+    const open=identity();open[5]=Math.max(.005,op);open[13]=level*(1-open[5]);open[14]=.010*(1-reveal);
     rig.mouth=multiply(rig.head,open);rig.lip=multiply(rig.jaw,transform(0,-.003*op,0));
-    rig.teeth = rig.head;
+    const teeth=identity();teeth[5]=.005+.995*reveal;teeth[13]=level*(1-teeth[5]);teeth[14]=.009*(1-reveal);
+    rig.teeth=multiply(rig.head,teeth);
     for(const side of ['L','R']){
       const blinkTime=(t+1.8+(side==='R'?.012:0))%5.3;
       const blink=smooth(0,.075,blinkTime)*(1-smooth(.075,.205,blinkTime));
@@ -544,17 +557,10 @@
       }
       const gesture=answer*(.50+.50*sin(t*2.4+s*.8));
       const carry=role==='auditor'&&s===1;
-      rig['arm'+side]=joint(rig.body,[s*.356,2.411,.016],(carry?.055:-.017)-w*swing*(carry?.08:.39)+.07*gesture,.007*breath,-s*(.015+.019*gesture));
-      rig['fore'+side]=joint(rig['arm'+side],[s*.429,2.011,.005],(carry?1.48:.08)+w*(carry?.025:.12+.10*Math.max(0,-swing))+.35*gesture+s*.018*breath);
-      const wrist=[s*.456,1.595,-.055];
+      rig['arm'+side]=joint(rig.body,[s*.356,2.411,.016],-.017-w*swing*(carry?.19:.39)+.07*gesture,.007*breath,-s*(.015+.019*gesture));
+      rig['fore'+side]=joint(rig['arm'+side],[s*.429,2.011,.005],(carry?.30:.08)+w*(.12+.10*Math.max(0,-swing))+.35*gesture+s*.018*breath);
       rig['hand'+side]=rig['fore'+side];
-      if(carry){
-        const aligned=joint(rig['fore'+side],wrist,-1.48);
-        const grip=new Float32Array([0,0,-1,0,1,0,0,0,0,-1,0,0,0,0,0,1]);
-        for(let i=0;i<3;i++)grip[12+i]=wrist[i]-(grip[i]*wrist[0]+grip[i+4]*wrist[1]+grip[i+8]*wrist[2]);
-        rig['hand'+side]=multiply(aligned,grip);
-        rig.tablet=aligned;
-      }
+      if(carry)rig.tablet=rig['hand'+side];
     }
     return rig;
   }
