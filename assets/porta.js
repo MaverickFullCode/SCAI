@@ -14,7 +14,8 @@
     return result;
   };
   function build(){
-    const graphite=color('344858',5),edge=color('8099a6',5),glass=color('8fbbca',9);
+    const finish=window.SCAILighting.glass;
+    const graphite=color('344858',5),edge=color('8099a6',5),glass=color(finish.tint,finish.material);
     const frost=color('c4d7dd',8),label=color('31506a',8),light=color('f5d297',10);
     const fixed=new SCAIMesh(),frameParts=[];
     const frame=(id,draw)=>{

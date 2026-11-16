@@ -44,6 +44,13 @@
       red:hex('be4d43','metal'), black:hex('292d34','rubber')
     };
     const p = pigment;
+    const windows=[],finish=global.SCAILighting.glass,paneColor=Object.assign(hex(finish.tint,'glass'),{material:finish.material});
+    function windowPane(id,center,right,up){
+      const pane=new mesh.constructor();
+      const corners=[[-.5,-.5],[.5,-.5],[.5,.5],[-.5,.5]].map(([u,v])=>center.map((n,i)=>n+right[i]*u+up[i]*v));
+      pane.quad(...corners,paneColor);
+      windows.push({id,center,mesh:pane,min:[0,1,2].map(i=>Math.min(...corners.map(p=>p[i]))),max:[0,1,2].map(i=>Math.max(...corners.map(p=>p[i])))});
+    }
     const B = (x,y,z,w,h,d,col,r=0) => m.box(x,y,z,w,h,d,col,r);
     const R = (x,y,z,w,h,d,col,rad=.04,angle=0) => m.bevelBox(x,y,z,w,h,d,col,rad,angle);
     const T = (a,b,r,col,n=10) => m.tube(a,b,r,col,n);
@@ -303,28 +310,53 @@
     for(let x=2.10;x<16.75;x+=4.27)B(x,-.043,0,.014,.003,15.54,p.seam);
     for(let z=-6.81;z<=7.6;z+=3.95)B(8.4,-.043,z,16.6,.003,.012,p.seam);
     for(const z of [-7.67,7.67]){
-      B(-6.4,3.11,z,12.8,6.24,.16,p.plaster);B(8.4,3.11,z,16.8,6.24,.16,p.roof);
+      if(z<0)B(-6.4,3.11,z,12.8,6.24,.16,p.plaster);
+      else{
+        // The north facade has an actual opening instead of a painted solid wall.
+        B(-6.4,.3275,z,12.8,.675,.16,p.plaster);
+        B(-6.4,5.2225,z,12.8,2.015,.16,p.plaster);
+        B(-12.585,2.44,z,.43,3.55,.16,p.plaster);B(-.335,2.44,z,.67,3.55,.16,p.plaster);
+      }
+      B(8.4,3.11,z,16.8,6.24,.16,p.roof);
       B(-6.4,.086,z-Math.sign(z)*.099,12.64,.177,.044,p.walnutDark);
       B(8.4,.196,z-Math.sign(z)*.097,16.6,.402,.047,p.steel);}
-    B(-12.72,3.11,0,.17,6.24,15.48,p.ivory);B(16.75,3.11,0,.20,6.24,15.48,p.roof);
+    B(-12.72,.32,0,.17,.66,15.48,p.ivory);B(-12.72,5.26,0,.17,1.94,15.48,p.ivory);
+    B(-12.72,2.47,-7.34,.17,3.64,.8,p.ivory);B(-12.72,2.47,7.19,.17,3.64,1.10,p.ivory);
+    B(16.75,3.11,0,.20,6.24,15.48,p.roof);
     B(16.623,.197,0,.036,.408,15.29,p.steel);
 
-    // Broad city views: one panorama per façade, divided by genuine frame profiles.
-    S([-12.618,2.47,-.15],[0,0,-13.58],[0,3.64,0],'window');
-    for(const h of [.636,3.31,4.304])B(-12.572,h,-.15,.093,.079,13.71,p.rail);
-    for(let z=-6.96;z<6.80;z+=2.27)B(-12.568,2.467,z,.098,3.68,.073,p.rail);
+    // Transparent panes sit inside real frame profiles; the city is far outside.
+    windowPane('window:west',[-12.65,2.47,-.15],[0,0,-13.58],[0,3.64,0]);
+    for(const h of [.636,3.31,4.304])B(-12.63,h,-.15,.093,.079,13.71,p.rail);
+    for(let z=-6.96;z<6.80;z+=2.27)B(-12.63,2.467,z,.098,3.68,.073,p.rail);
     B(-12.544,.59,-.15,.18,.078,13.76,p.maple);
-    S([-6.52,2.44,7.572],[-11.70,0,0],[0,3.55,0],'window');
+    windowPane('window:north',[-6.52,2.44,7.56],[-11.70,0,0],[0,3.55,0]);
     for(const h of [.65,3.32,4.234])B(-6.52,h,7.53,11.79,.066,.073,p.rail);
     for(let x=-12.38;x<-.5;x+=2.343)B(x,2.443,7.527,.065,3.61,.08,p.rail);
     B(-6.52,.60,7.52,11.84,.066,.16,p.maple);
-    // Interior glazing: open air occupies the clear portions; the sills keep the collision legible.
+    // The office/warehouse partitions use the same glass as the sliding door.
     for(const z of [-5.15,5.15]){
       B(0,.315,z,.17,.64,5.10,p.plaster);B(0,5.295,z,.17,1.88,5.10,p.plaster);
       for(const dz of [-2.51,-.85,.85,2.51])B(0,2.49,z+dz,.131,3.83,.064,p.rail);
       for(const h of [.64,3.55,4.383])B(0,h,z,.14,.073,5.10,p.rail);
       for(const h of [1.077,1.26])B(0,h,z,.021,.104,5.04,p.frost);
+      windowPane(`window:partition:${z}`,[.015,2.49,z],[0,0,5.04],[0,3.70,0]);
     }
+    // A closed distant shell covers every view through the glazing, including
+    // steep downward and grazing views. UVs preserve the skyline's height;
+    // the shader continues sky/foliage beyond the source image without a rim.
+    const exteriorCenter=[2,0,-2],exteriorRadius=40,columns=96,rows=24;
+    const exteriorPoint=(u,v)=>{
+      const yaw=u*TAU,pitch=(v-.5)*Math.PI,y=exteriorRadius*Math.sin(pitch);
+      const point=[2+exteriorRadius*Math.cos(pitch)*Math.cos(yaw),y,-2+exteriorRadius*Math.cos(pitch)*Math.sin(yaw)];
+      return {point,normal:point.map((n,i)=>(exteriorCenter[i]-n)/exteriorRadius),uv:[u*4,(22-y)/27]};
+    };
+    for(let row=0;row<rows;row++)for(let column=0;column<columns;column++){
+      const corners=[[column,row],[column+1,row],[column+1,row+1],[column,row+1]].map(([u,v])=>exteriorPoint(u/columns,v/rows));
+      for(const i of [0,1,2,0,2,3]){const vertex=corners[i];mesh.vertex(vertex.point,vertex.normal,[1,1,1],vertex.uv,14);}
+    }
+    mesh.exterior={center:exteriorCenter,radius:exteriorRadius};
+    B(-12.72,-2.6,0,.17,5.2,15.48,p.ivory);B(-6.4,-2.6,7.67,12.8,5.2,.16,p.plaster);
     B(0,5.70,0,.18,1.09,5.29,p.plaster);B(0,5.13,0,.19,.075,5.28,p.rail);
     // Rear wall: bookmatched oak panels, pin lighting, inset digital presentation board.
     B(-8.85,2.77,-7.53,7.20,5.56,.098,p.walnutDark);
@@ -479,6 +511,7 @@
     R(-8.85,4.778,-3.25,3.091,.015,.188,p.lamp,.005);
     mesh.beginProps();
     furnishOffice();furnishWarehouse();
+    mesh.windows=windows;
     return mesh;
   }
   global.SCAIWorld = {build};

@@ -347,7 +347,7 @@
       // This distance can shrink only because of a wall. Furniture never hides the player.
       this.hidePlayer=!focused&&this.cameraScale<(this.hidePlayer ? .24 : .20);
       const nearClip=focused ? .30 : this.cameraNear;
-      this.vp=m4.mul(m4.perspective(fov*Math.PI/180,this.canvas.width/this.canvas.height,nearClip,44),m4.lookAt(this.eye,center,[0,1,0]));}
+      this.vp=m4.mul(m4.perspective(fov*Math.PI/180,this.canvas.width/this.canvas.height,nearClip,90),m4.lookAt(this.eye,center,[0,1,0]));}
     render(){
       this.resize();
       this.renderer.draw(this);

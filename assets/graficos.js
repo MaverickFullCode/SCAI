@@ -294,8 +294,15 @@
     const [x, y, w, h] = tiles[key];
     return [(x+.5)/width, (y+.5)/height, (x+w-.5)/width, (y+h-.5)/height];
   }
+  function createPanorama() {
+    createAtlas();
+    const [x,y,w,h]=tiles.window,canvas=document.createElement('canvas');
+    canvas.width=w;canvas.height=h;
+    canvas.getContext('2d').drawImage(atlas,x,y,w,h,0,0,w,h);
+    return canvas;
+  }
   global.SCAIGraphics = {
-    createAtlas, uv,
+    createAtlas, createPanorama, uv,
     get ready() { createAtlas(); return ready; }
   };
 })(window);

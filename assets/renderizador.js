@@ -12,13 +12,15 @@
       for(const name of ['Position','Normal','Color','Uv','Material','Skin','Detail']){
         this.attr[name]=gl.getAttribLocation(this.program,'a'+name);
       }
-      for(const name of ['Model','VP','Eye','Atlas','Graphics','Shadow','ShadowReady','Actor','Player','Worker','Bones[0]','People','PeopleReady','Opacity','TabletTime']){
+      for(const name of ['Model','VP','Eye','Atlas','Graphics','Panorama','Shadow','ShadowReady','Actor','Player','Worker','Bones[0]','People','PeopleReady','Opacity','TabletTime']){
         this.uniform[name]=gl.getUniformLocation(this.program,'u'+name);
       }
       const mesh=new SCAIMesh();
       SCAIWorld.build(mesh,colors);
       this.world=this.buffer(mesh.v,12);
       this.cameraObjects=mesh.cameraObjects;
+      this.windows=(mesh.windows||[]).map(({mesh:glass,...pane})=>({...pane,geometry:this.buffer(glass.v,12)}));
+      this.hiddenWindows=new Set();
       this.hiddenObjects=new Set();
       this.hiddenActors=new Set();
       this.hiddenDoorParts=new Set();
@@ -43,11 +45,16 @@
       this.graphicsTexture=this.texture(1);
       this.uploadImage(1,this.graphicsTexture,SCAIGraphics.createAtlas());
       SCAIGraphics.ready.then(canvas=>this.uploadImage(1,this.graphicsTexture,canvas));
+      // An independent, non-mipmapped panorama avoids atlas bleed at wrap seams.
+      this.panoramaTexture=this.texture(4);
+      this.uploadImage(4,this.panoramaTexture,SCAIGraphics.createPanorama());
+      SCAIGraphics.ready.then(()=>this.uploadImage(4,this.panoramaTexture,SCAIGraphics.createPanorama()));
       const surfaces=window.SCAIMaterials;
       if(surfaces.complete && surfaces.naturalWidth) this.uploadImage(0,this.materialTexture,surfaces);
       else surfaces.addEventListener('load',()=>this.uploadImage(0,this.materialTexture,surfaces),{once:true});
       gl.activeTexture(gl.TEXTURE2); gl.bindTexture(gl.TEXTURE_2D,this.shadow.texture);
       gl.uniform1i(this.uniform.Atlas,0); gl.uniform1i(this.uniform.Graphics,1);
+      gl.uniform1i(this.uniform.Panorama,4);
       gl.uniform1f(this.uniform.Opacity,1);
       gl.uniform1i(this.uniform.Shadow,2); gl.uniform1i(this.uniform.ShadowReady,this.shadow.ready);
       this.peopleTexture=this.texture(3);
@@ -237,6 +244,26 @@
       }
       gl.uniformMatrix4fv(this.uniform.Model,false,identity);
     }
+    drawTransparent(engine){
+      const gl=this.gl,panes=[];
+      for(const pane of this.windows||[]){
+        if(engine.cameraOverlaps(pane,this.hiddenWindows.has(pane.id)?.06:0)){this.hiddenWindows.add(pane.id);continue;}
+        this.hiddenWindows.delete(pane.id);panes.push({geometry:pane.geometry,center:pane.center,model:identity});
+      }
+      if(this.door)for(const leaf of this.door.leaves){
+        if(this.hiddenDoorParts.has(leaf.id))continue;
+        const offset=leaf.side*2.55*(engine.door?.open||0),model=new Float32Array(identity);model[14]=offset;
+        panes.push({geometry:leaf.glass,center:[.13,2.5,leaf.side*1.3+offset],model});
+      }
+      if(!panes.length)return;
+      const distance=pane=>pane.center.reduce((sum,v,i)=>sum+(v-engine.eye[i])**2,0);
+      panes.sort((a,b)=>distance(b)-distance(a));
+      gl.uniform1i(this.uniform.Actor,0);gl.uniform1f(this.uniform.Opacity,window.SCAILighting.glass.opacity);
+      gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
+      for(const pane of panes){gl.uniformMatrix4fv(this.uniform.Model,false,pane.model);this.drawGeometry(pane.geometry);}
+      gl.depthMask(true);gl.disable(gl.BLEND);gl.uniformMatrix4fv(this.uniform.Model,false,identity);
+      gl.uniform1f(this.uniform.Opacity,1);gl.uniform1i(this.uniform.Actor,1);
+    }
     draw(engine) {
       const gl=this.gl, p=engine.player,worker=this.workerPosition, focus=engine.events.isDialogueOpen?.(),blinkClock=performance.now()/1000;
       gl.viewport(0,0,gl.drawingBufferWidth,gl.drawingBufferHeight);
@@ -258,13 +285,7 @@
       if(!focus&&!engine.hidePlayer)this.drawPerson(p.x,p.z,engine.t,engine.walking,'auditor',p.dir,false,engine.walkDistance,blinkClock,engine.seating?.blend||0,engine.tabletRead);
       if(this.personVisible(engine,-10.7,-5.2,'manager',Math.PI))this.drawPerson(-10.7,-5.2,engine.t,false,'manager',Math.PI,!!engine.events.isTalking?.(),undefined,blinkClock);
       if(!focus&&this.personVisible(engine,worker.x,worker.z,'worker',worker.dir,true))this.drawPerson(worker.x,worker.z,engine.t,false,'worker',worker.dir,false,undefined,blinkClock,1);
-      if(this.door){
-        gl.uniform1i(this.uniform.Actor,0);gl.uniform1f(this.uniform.Opacity,.16);
-        gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);
-        this.drawDoor(engine,true);
-        gl.depthMask(true);gl.disable(gl.BLEND);
-        gl.uniform1f(this.uniform.Opacity,1);gl.uniform1i(this.uniform.Actor,1);
-      }
+      this.drawTransparent(engine);
     }
   }
   window.SCAIRenderer=Renderer;
