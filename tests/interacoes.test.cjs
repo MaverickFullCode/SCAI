@@ -19,9 +19,10 @@ function approach(e,c){
   }
   assert.fail('Cadeira sem ponto acessível: '+c.id);
 }
-test('todas as oito cadeiras permitem sentar, bloquear caminhada e levantar para ponto livre',()=>{
-  assert.equal(chairs.length,8);
-  for(const c of chairs){
+test('as oito cadeiras livres permitem sentar, bloquear caminhada e levantar para ponto livre',()=>{
+  assert.equal(chairs.length,9);
+  assert.equal(chairs.filter(c=>!c.occupant).length,8);
+  for(const c of chairs.filter(c=>!c.occupant)){
     const e=engine();approach(e,c);const start={...e.player};
     assert.equal(e.usePhysical(),true);assert.ok(e.seating);
     assert.equal(e.usePhysical(),false,'não repetir durante transição');
@@ -32,6 +33,17 @@ test('todas as oito cadeiras permitem sentar, bloquear caminhada e levantar para
     e.keys={};assert.equal(e.usePhysical(),true);advance(e,3.5);
     assert.equal(e.seating,null);assert.ok(e.canMove(e.player.x,e.player.z));
     assert.ok(Math.hypot(e.player.x-start.x,e.player.z-start.z)<1e-7);
+  }
+});
+
+test('cadeira do funcionário não oferece interação e sua posição antiga fica livre',()=>{
+  const e=engine(),c=chairs.find(c=>c.occupant==='worker');
+  assert.ok(c);assert.equal(e.canMove(c.x,c.z),false);
+  assert.equal(e.canMove(3.3,-2.25),true,'sem colisão invisível no antigo posto');
+  for(const [dx,dz] of [[.7,0],[-.7,0],[0,.75],[0,-.75]]){
+    Object.assign(e.player,{x:c.x+dx,z:c.z+dz});
+    assert.equal(e.nearbyChair(),null);assert.equal(e.physicalAction(),null);
+    assert.equal(e.usePhysical(),false);assert.equal(e.seating,null);
   }
 });
 test('contato por qualquer lado independe da orientação e escolhe a cadeira mais próxima',()=>{

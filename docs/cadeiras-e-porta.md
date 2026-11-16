@@ -14,7 +14,7 @@ Os botões de ação na tela oferecem as mesmas funções por toque. Os cartões
 
 ## Cadeiras
 
-As oito cadeiras do escritório são utilizáveis. A seleção aceita contato de qualquer lado, independentemente da direção para a qual o auditor está olhando. Se duas cadeiras estiverem ao alcance do contato, a mais próxima é selecionada.
+As oito cadeiras do escritório são utilizáveis pelo jogador. A cadeira atrás da mesa do galpão usa o mesmo modelo, fica voltada para a bancada e está ocupada pelo funcionário, sentado com as mãos junto aos documentos e o olhar voltado para o trabalho. Ele não oferece diálogo ou interação; a cadeira ocupada não oferece a ação de sentar. A seleção das cadeiras livres aceita contato de qualquer lado, independentemente da direção para a qual o auditor está olhando. Se duas estiverem ao alcance do contato, a mais próxima é selecionada.
 
 O auditor primeiro caminha até a frente do assento e se orienta; só depois dobra os joelhos e abaixa o corpo. A pose usa o esqueleto do próprio modelo, com pés apoiados e calça no topo da almofada. O tablet permanece preso à mão direita, ao lado da cadeira, e a mão esquerda repousa pouco acima da mesa. Ao levantar, o auditor retorna pelo trajeto de aproximação a uma posição livre.
 
@@ -41,4 +41,4 @@ python tests/interacoes-runtime.py --engine webkit --case celular
 python tests/interface-mobile.py --case celular --case tablet-paisagem --case computador
 ```
 
-Os testes de interação cobrem as oito cadeiras, escolha por proximidade, alinhamento antes da pose, saída livre, comandos Q/E, bloqueio da missão sentado, porta manual e colisões. Os testes geométricos conferem pés, assento, mão/mesa e ancoragem do tablet. A conferência WebGL usa Edge em computador/celular/tablet emulados e WebKit em celular emulado; não representa medição em aparelho físico.
+Os testes de interação cobrem as oito cadeiras livres e o bloqueio da cadeira ocupada, escolha por proximidade, alinhamento antes da pose, saída livre, comandos Q/E, bloqueio da missão sentado, porta manual e colisões. Os testes geométricos conferem pés, assento, mão/mesa e ancoragem do tablet. A conferência WebGL usa Edge em computador/celular/tablet emulados e WebKit em celular emulado; não representa medição em aparelho físico.

@@ -256,6 +256,11 @@
       }
     };
     document.querySelectorAll('#touchControls [data-key]').forEach(button => {
+      // Cancel the native long press before its menu/haptic feedback starts.
+      // Preventing pointerdown alone does not cancel the browser's touch gesture.
+      button.addEventListener('touchstart', event => {
+        if (event.cancelable) event.preventDefault();
+      }, {passive: false});
       button.addEventListener('pointerdown', event => {
         if (event.pointerType === 'mouse' && event.button !== 0) return;
         event.preventDefault();

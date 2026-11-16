@@ -87,9 +87,10 @@ with sync_playwright() as pw:
 
     contacts=frame.evaluate('''()=>{
      let checked=0;
-     for(const chair of SCAI3D.chairs)for(const [dx,dz] of [[.675,0],[-.675,0],[0,.72],[0,-.72]]){
+     const freeChairs=SCAI3D.chairs.filter(chair=>!chair.occupant);
+     for(const chair of freeChairs)for(const [dx,dz] of [[.675,0],[-.675,0],[0,.72],[0,-.72]]){
       const x=chair.x+dx,z=chair.z+dz;if(!qaEngine.canMove(x,z))continue;
-      const nearest=[...SCAI3D.chairs].sort((a,b)=>Math.hypot(a.x-x,a.z-z)-Math.hypot(b.x-x,b.z-z))[0];
+      const nearest=[...freeChairs].sort((a,b)=>Math.hypot(a.x-x,a.z-z)-Math.hypot(b.x-x,b.z-z))[0];
       for(const dir of [0,Math.PI/2,Math.PI,Math.PI*1.5]){
        place(x,z,dir);
        if(qaEngine.nearbyChair()?.id!==nearest.id||qaEngine.physicalAction()?.kind!=='chair')throw Error('Cadeira incorreta ou dependente da orientação');

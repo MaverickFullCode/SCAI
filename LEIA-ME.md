@@ -1,4 +1,4 @@
-# SCAI • Versão Alfa 0.3.2
+# SCAI • Versão Alfa 0.3.3
 
 Leia também [MEMORIA-DO-PROJETO.md](MEMORIA-DO-PROJETO.md) para o registro permanente da conversa de origem, metodologia e decisões visuais.
 
@@ -23,6 +23,8 @@ Veja [os personagens da Versão Alfa 0.2](docs/personagens-realistas.md), aprova
 ## Controles
 
 Na ramificação de testes, **Q** aciona as conversas e procedimentos da missão. **E** usa cadeiras e a porta dupla entre o escritório e o galpão. Os botões de ação também funcionam por toque. Ao sentar, o auditor fica ancorado à cadeira; pressione E novamente para levantar. A câmera continua livre. Veja [cadeiras e porta de vidro](docs/cadeiras-e-porta.md) para os controles, capturas e validação.
+
+O funcionário do galpão fica sentado atrás da mesa, em pose de trabalho, sem diálogo ou interação. Sua cadeira permanece ocupada; as oito cadeiras do escritório continuam disponíveis para o jogador.
 
 No celular, os botões **Missão** e **Trabalho** abrem os respectivos painéis do topo, que começam recolhidos. Use ×, **Recolher** ou toque novamente no botão para fechá-los. A pergunta fica fixa durante a escolha das respostas. Veja as capturas e a validação em [Interface em celulares](docs/interface-celular.md).
 

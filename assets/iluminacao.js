@@ -53,6 +53,7 @@
     uniform bool uShadowReady,uPeopleReady;
     uniform vec3 uEye;
     uniform vec2 uPlayer;
+    uniform vec2 uWorker;
     uniform float uOpacity,uTabletTime;
     varying vec3 world,normal,color;
     varying vec3 localPosition;
@@ -247,7 +248,7 @@
       if(n.y>.5 && world.y<.11){
         float floorEdges=min(min(world.x+12.72,16.75-world.x),7.63-abs(world.z));
         ao-=.18*exp(-max(floorEdges,0.)*2.6);
-        ao-=.28*max(footprint(uPlayer),max(footprint(vec2(-10.7,-5.2)),footprint(vec2(3.3,-2.25))));
+        ao-=.28*max(footprint(uPlayer),max(footprint(vec2(-10.7,-5.2)),footprint(uWorker)));
       }
       vec3 ambient=mix(vec3(.43,.43,.46),vec3(.66,.71,.79),ceiling);
       vec3 lit=base*(ambient*ao + broad*mix(.11,.36,vis)*vec3(1.12,1.,.87));

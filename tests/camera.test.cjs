@@ -59,7 +59,7 @@ test('vão de passagem permanece livre, enquanto as divisórias acionam o zoom',
 
 test('a caminhada continua bloqueada por mesas, cadeiras, equipamentos e personagens',()=>{
   const e=engine();
-  for(const [x,z] of [[-8.85,-3.25],[-8.85,-1.92],[-4.3,3.8],[4.5,-5.75],[12.615,-1.35],[-10.7,-5.2],[3.3,-2.25]]){
+  for(const [x,z] of [[-8.85,-3.25],[-8.85,-1.92],[-4.3,3.8],[4.5,-5.75],[12.615,-1.35],[-10.7,-5.2],[5.65,3.15]]){
     assert.equal(e.canMove(x,z),false,`${x},${z}`);
   }
 });
@@ -105,8 +105,8 @@ test('mesa e cadeira somem apenas junto à câmera, conservando o restante do ce
 });
 
 test('personagem atravessado desaparece e reaparece sem ocultar o jogador',()=>{
-  const e=engine(),r=renderer();r.actors={worker:{bounds:{min:[-.55,0,-.3],max:[.55,3.3,.3]}}};
-  e.eye=[3.3,2.8,-2.25];assert.equal(r.personVisible(e,3.3,-2.25,'worker',.6),false);
-  e.eye=[3.3,3.26,1];assert.equal(r.personVisible(e,3.3,-2.25,'worker',.6),true);
+  const e=engine(),r=renderer();r.actors={worker:{seatedBounds:{min:[-.55,0,-.75],max:[.55,2.95,.3]}}};
+  e.eye=[5.65,2.5,3.115];assert.equal(r.personVisible(e,5.65,3.115,'worker',0,true),false);
+  e.eye=[5.65,3.26,1];assert.equal(r.personVisible(e,5.65,3.115,'worker',0,true),true);
   assert.equal(e.hidePlayer,false);assert.equal(e.cameraScale,1);
 });

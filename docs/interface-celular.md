@@ -16,6 +16,12 @@ Localizar objetivo recolhe o painel para mostrar a direção indicada. Conversas
 
 Os sinais de dispositivo e o tamanho físico da tela em pixels CSS evitam aplicar o modo de celular a uma janela estreita do computador ou a um tablet em tela dividida. Tablets Android compactos e iPads também mantêm o modo de tablet.
 
+## Controles por toque
+
+Os botões de movimento e giro cancelam o gesto nativo de toque prolongado desde o início do contato, para impedir o menu e sua possível vibração. Segurar continua acionando o controle; soltar ou cancelar o toque interrompe a ação. É possível caminhar e girar com dois dedos ao mesmo tempo. O botão F e os demais botões continuam aceitando toques normais.
+
+O toque prolongado e o uso de dois dedos foram conferidos em celular e tablet emulados no Edge. A vibração física requer conferência em um aparelho real.
+
 ## Rosto do gestor
 
 As linhas de envelhecimento em relevo foram removidas da testa, da região sob os olhos e do entorno da boca de Marcos. A barba e os fios grisalhos continuam identificando o personagem; o restante da pele permanece suave.

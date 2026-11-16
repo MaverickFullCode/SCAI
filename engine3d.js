@@ -16,7 +16,8 @@
   const PLAYER_RADIUS=.34;
   const CHAIRS=[
     ...[-10.12,-8.85,-7.58].flatMap(x=>[{x,z:-4.62,facing:1},{x,z:-1.92,facing:-1}]),
-    {x:-8.8,z:4.9,facing:-1},{x:-4.3,z:4.9,facing:-1}
+    {x:-8.8,z:4.9,facing:-1},{x:-4.3,z:4.9,facing:-1},
+    {x:5.65,z:3.15,facing:-1,occupant:'worker'}
   ].map((chair,index)=>({...chair,id:'chair-'+index,dir:chair.facing>0?Math.PI:0}));
   const ease=value=>{const t=Math.max(0,Math.min(1,value));return t*t*(3-2*t);};
   const turn=(from,to,t)=>from+Math.atan2(Math.sin(to-from),Math.cos(to-from))*t;
@@ -37,14 +38,14 @@
     {x:5.1,z:-1.4,hx:1.55,hz:.425,top:1.16},
     {x:12.615,z:-1.35,hx:1.64,hz:.57,top:3.12},
     {x:5.65,z:2.05,hx:1,hz:.48,top:1.58},
+    {x:5.65,z:3.15,hx:.325,hz:.37,top:1.97},
     {x:15,z:1.4,hx:.38,hz:.31,top:2.45}
   ];
   const WALK_CIRCLES=[
     {x:-11.6,z:5.9,r:.68},
     {x:-6.55,z:-6.25,r:.55},
     {x:-1.4,z:-6.2,r:.65},
-    {x:-10.7,z:-5.2,r:.42},
-    {x:3.3,z:-2.25,r:.42}
+    {x:-10.7,z:-5.2,r:.42}
   ];
   const m4 = {
     perspective(fov,asp,n,f){const t=1/Math.tan(fov/2),o=new Float32Array(16);o[0]=t/asp;o[5]=t;o[10]=(f+n)/(n-f);o[11]=-1;o[14]=2*f*n/(n-f);return o;},
@@ -152,6 +153,7 @@
     nearbyChair(){
       const p=this.player;
       return CHAIRS.filter(chair=>{
+        if(chair.occupant)return false;
         const dx=chair.x-p.x,dz=chair.z-p.z;
         const gap=Math.hypot(Math.max(Math.abs(dx)-.325,0),Math.max(Math.abs(dz)-.37,0));
         return gap<=PLAYER_RADIUS+.09;

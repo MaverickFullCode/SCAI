@@ -87,6 +87,21 @@ test('estar sentado suprime o ciclo de caminhada mesmo com comando mantido',()=>
   for(const bone of people.bones)assert.deepEqual(Array.from(idle[bone]),Array.from(walking[bone]));
 });
 
+test('funcionário sentado mantém os pés no piso e as duas mãos sobre a borda da bancada',()=>{
+  const model=people.build('worker'),tableTop=(.755+.05)*1.52;
+  for(const time of [0,1.5,3,5,8,11]){
+    const rig=people.pose(0,0,time,false,'worker',0,false,undefined,time,1);
+    for(const side of ['L','R']){
+      const hand=vertices(model,rig,name=>name==='hand'+side),feet=vertices(model,rig,name=>name==='foot'+side);
+      const bottom=Math.min(...hand.map(p=>p[1]));
+      assert.ok(bottom>tableTop&&bottom<tableTop+.06,'mão pouco acima do tampo, sem atravessá-lo');
+      assert.ok(Math.min(...hand.map(p=>p[2]))<-.60,'dedos alcançam a borda da bancada');
+      assert.ok(Math.abs(Math.min(...feet.map(p=>p[1]))-.012)<.00001);
+      assert.ok(distance(point(rig['hand'+side],[side==='L'?-.456:.456,1.595,-.055]),point(rig['fore'+side],[side==='L'?-.456:.456,1.595,-.055]))<1e-6);
+    }
+  }
+});
+
 test('mão esquerda repousa sobre a borda da mesa com palma voltada para baixo',()=>{
   const model=people.build('auditor');
   for(const time of [.2,2.3,4.4,6.5,8.6]){

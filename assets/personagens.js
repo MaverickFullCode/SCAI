@@ -599,13 +599,14 @@
     // posterior trouser vertices on that surface, rather than inside the seat.
     const seated=clamp(seatBlend),seatDrop=.375*seated;
     const reading=role==='auditor'?clamp(tabletBlend):0;
+    const working=role==='worker'?seated:0;
     const w=walking&&!seated&&!reading?1:0, breath=sin(t*1.65), answer=mouth?1:0;
     const cycle=(walkDistance ?? time*3.6)/strideDistance;
     const phase=cycle*TAU;
     const root=transform(x,seatDrop?-seatDrop:0,z,0,dir),rig={};
     rig.body=joint(multiply(root,transform(0,.003*breath,0)),[0,1.66,0],0,-sin(phase)*.055*w,cos(phase)*.013*w);
     if(seated)rig.body=joint(rig.body,[0,hipHeight,.007],.10*sin(Math.PI*seated));
-    rig.head=joint(rig.body,[0,2.58,0],lerp(-.013*breath+.018*sin(t*5)*answer,-.42522,reading),lerp(.029*sin(t*.66)+.033*sin(t*2.5)*answer,.86646,reading),.006*sin(t*.94)*(1-reading));
+    rig.head=joint(rig.body,[0,2.58,0],lerp(lerp(-.013*breath+.018*sin(t*5)*answer,-.14,working),-.42522,reading),lerp(.029*sin(t*.66)+.033*sin(t*2.5)*answer,.86646,reading),.006*sin(t*.94)*(1-reading));
     const vis=answer*(.4+.33*sin(t*19)+.20*sin(t*29+1)+.07*sin(t*42)),op=Math.max(0,vis);
     rig.jaw=joint(rig.head,[0,headHeight(2.785,role),.028],-.088*op);
     const reveal=smooth(.025,.18,op),level=headHeight(mouthHeight,role);
@@ -686,12 +687,12 @@
       // naturally over the lap; hand, fingers and tablet share the same rig.
       let armAngle=-.017-w*swing*(carry?.19:.39)+.07*gesture+.04*seated;
       let foreAngle=(carry?.30:.08)+(carry?.05:.78)*seated+w*(.12+.10*Math.max(0,-swing))+.35*gesture+s*.018*breath;
-      const tableHand=role==='auditor'&&s<0&&seated>0;
+      const tableHand=seated>0&&((role==='auditor'&&s<0)||role==='worker');
       if(tableHand){
         // Shoulder and elbow carry the wrist towards the table before the hand
         // pronates. The skin stays attached through the forearm/wrist blend.
-        armAngle=lerp(armAngle,.26,seated);
-        foreAngle=lerp(foreAngle,.415,seated);
+        armAngle=lerp(armAngle,working?.36:.26,seated);
+        foreAngle=lerp(foreAngle,working?.12+.006*sin(t*1.1+s):.415,seated);
       }
       if(carry&&reading){armAngle=lerp(armAngle,.25,reading);foreAngle=lerp(foreAngle,2.0,reading);}
       const armRoll=-s*(.015+.019*gesture+(carry?.27:.04)*seated);
@@ -701,7 +702,7 @@
       if(tableHand){
         const wrist=[s*.456,1.595,-.055];
         rig['hand'+side]=joint(rig['fore'+side],wrist,(Math.PI/2-.15-armAngle-foreAngle)*seated);
-        rig['hand'+side]=joint(rig['hand'+side],wrist,0,Math.PI/2*seated);
+        rig['hand'+side]=joint(rig['hand'+side],wrist,0,-s*Math.PI/2*seated);
       }
       if(carry){
         // Face the display towards the eyes, with its top upright. A yaw-only
