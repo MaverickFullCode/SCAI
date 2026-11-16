@@ -1,4 +1,4 @@
-# SCAI • Versão Alfa 0.4.1
+# SCAI • Versão Alfa 0.4.2
 
 Leia também [MEMORIA-DO-PROJETO.md](MEMORIA-DO-PROJETO.md) para o registro permanente da conversa de origem, metodologia e decisões visuais.
 
@@ -22,7 +22,7 @@ Veja [os personagens da Versão Alfa 0.2](docs/personagens-realistas.md), aprova
 
 ## Controles
 
-Na Versão Alfa 0.4.1, **Q** aciona as conversas e procedimentos da missão. **E** usa cadeiras e a porta dupla entre o escritório e o galpão. Os botões de ação também funcionam por toque. Ao sentar, o auditor fica ancorado à cadeira; pressione E novamente para levantar. A câmera continua livre. Veja [cadeiras e porta de vidro](docs/cadeiras-e-porta.md) para os controles, capturas e validação.
+Na Versão Alfa 0.4.2, **Q** aciona as conversas e procedimentos da missão. **E** usa cadeiras e a porta dupla entre o escritório e o galpão. Os botões de ação também funcionam por toque. Ao sentar, o auditor fica ancorado à cadeira; pressione E novamente para levantar. A câmera continua livre. Veja [cadeiras e porta de vidro](docs/cadeiras-e-porta.md) para os controles, capturas e validação.
 
 O funcionário do galpão fica sentado atrás da mesa, em pose de trabalho, sem diálogo ou interação. Sua cadeira permanece ocupada; as oito cadeiras do escritório continuam disponíveis para o jogador.
 
@@ -38,9 +38,9 @@ O objetivo **Painel de indicadores** fica em frente ao armário baixo com pastas
 
 1. Tutorial introdutório; salas e galpão exploráveis em 3D, agora com teto alto completo, painéis acústicos, estrutura de suporte e luminárias; auditor controlável, gestor e funcionário, com personagens arredondados, rostos e vestuário detalhados em geometria leve. A câmera se aproxima somente para evitar paredes e divisórias; apenas quando essa aproximação fica muito curta, oculta o auditor. Móveis e outros personagens não provocam zoom: ficam invisíveis enquanto a câmera os atravessa e reaparecem ao sair. A caminhada do auditor continua bloqueada por paredes, móveis, cadeiras, estantes, paletes, bancadas, equipamentos e pessoas. Veja [a revisão da câmera e do polegar](docs/camera-e-polegar.md). Na entrevista, uma faixa inferior ocupa 50% da tela em celulares e 25% em tablets/computadores, a fala do gestor aparece a 30 caracteres por segundo e o feedback pedagógico surge instantaneamente; a boca se anima apenas durante a fala do gestor. As opções surgem quando a fala termina e usam fonte de 16 px, igual à fala. O enquadramento aproxima o gestor e oculta temporariamente o auditor para deixar o rosto livre; a câmera retorna ao encerrar a conversa.
 2. Duas perguntas de entrevista com escolhas alternativas e feedback imediato.
-3. Gestão de risco com cinco técnicas, metas e prioridades, orçamento de 12 pontos técnicos e plano não obrigatório na quantidade.
-4. Execução no ambiente 3D: testes planejados ou fora da meta podem ser executados se houver saldo; cada teste consome seus próprios pontos e uma execução fora da meta registra +1 mudança de plano, sem conceder créditos; constatações registradas.
-5. Emissão de uma das quatro opiniões e avaliação comparativa: aprovação somente com opinião correta E cobertura de pelo menos 70% das quatro técnicas relevantes; tela de resultados com feedback explicativo.
+3. Plano com cinco opções de teste e seleção única por caixa de marcação, sem prioridade ou repetição. Orçamento de 8 créditos: custo exato de documentos, contagem, cálculo e indicadores (2 + 3 + 2 + 1).
+4. Cada teste só pode ser executado uma vez; rever resultados é grátis. Teste fora do plano registra uma mudança, sem crédito extra ou desconto na nota. O saldo limita a execução, e testes pouco úteis podem impedir a conclusão na tentativa atual.
+5. Conclusão com quatro tipos de relatório, explicados em linguagem simples. Aprovação exige os quatro testes úteis e a opinião adequada. Nota: até 80 pontos pelos testes (documentos 25%, contagem 35%, cálculo 30%, indicadores 10%), 15 pelo relatório e 5 pela entrevista. Fornecedor não pontua neste caso. A avaliação explica resultados, omissões e motivo da conclusão.
 6. Configuração Eco para reduzir resolução interna e limitar desenho a cerca de 30 FPS. O cenário mantém as malhas na GPU, compartilha atlas de superfícies e sinalização e calcula uma vez as sombras do mobiliário. A iluminação combina luz fria das janelas e luz quente do interior.
 
 ## Limitações assumidas do protótipo
@@ -59,3 +59,11 @@ A missão foi percorrida até o resultado no Microsoft Edge, com abertura pelo m
 ## Consulta visual do tablet
 
 Pressione **F** ou o botão F nos controles de toque para consultar o tablet, em pé ou sentado. O auditor levanta o braço, olha para gráficos e números decorativos durante três segundos e retorna à pose anterior com a tela apagada. O movimento fica suspenso durante a consulta; saldo e missão não são alterados. A função integra a Versão Alfa 0.3.2, junto com o alinhamento da tela ao rosto. As alternativas da entrevista são embaralhadas a cada pergunta; pontuação e feedback seguem o conteúdo escolhido.
+
+## Revisão de textos e planejamento · Alfa 0.4.2
+
+Versão Alfa 0.4.2 registrada em `codex/teste-nova-implementacao`, integrada à main com autorização do autor. Menu, introdução, entrevista, objetivos, planejamento, execução, relatório, avaliação e sinalização do cenário usam textos revisados. Alternativas da entrevista permanecem embaralhadas, com caminhos plausíveis e retorno específico. A fala mantém 30 caracteres por segundo; feedback permanece instantâneo.
+
+Validação da revisão: `node --test tests/textos-plano.test.cjs tests/interacoes.test.cjs tests/camera.test.cjs` e `python tests/textos-plano-runtime.py`. O fluxo de navegador cobre computador, celular e tablet emulados, execução fora do plano, consulta gratuita, saldo insuficiente, aprovação e revisão.
+
+Referência para as distinções entre relatórios: [NBC TA 700/705, CFC](https://cfc.org.br/wp-content/uploads/2018/04/Publicacao_NBC_TA_AUDITORIA.pdf). As regras de créditos, pesos e conclusão são escolhas didáticas deste jogo.
