@@ -131,8 +131,8 @@
       for(const [bone,chunk] of this.chunks){
         const a=chunk.vertices;
         if(['head','mouth','lip','teeth','eyelidL','eyelidR'].includes(bone)){
-          // Match the approved face length and aspect ratio from the original rig.
-          const sx=role==='auditor'?.90:.94,sy=role==='manager'?1.08:1.04;
+          // Scale head features together, preserving the original height and rig anchors.
+          const sx=role==='auditor'?.87:.91,sy=role==='manager'?1.08:1.04;
           for(let i=0;i<a.length;i+=16){
             a[i]*=sx;a[i+1]=headHeight(a[i+1],role);
             a[i+3]/=sx;a[i+4]/=sy;
@@ -149,27 +149,30 @@
   const gauss=(x,y,cx,cy,wx,wy)=>Math.exp(-(((x-cx)/wx)**2+((y-cy)/wy)**2));
   function makeHead(m,P,role) {
     const manager=role==='manager',worker=role==='worker';
-    // Asymmetric cranium, wide cheekbones, narrow chin and the brow, eye sockets, muzzle,
+    P={...P,hair:blend(P.hair,col('251d19'),manager?.10:worker?0:.52),strand:blend(P.strand,col('68503b'),manager?0:.18)};
+    // Asymmetric cranium, straighter jawline, broader chin and the brow, eye sockets, muzzle,
     // nose bridge/alae and chin sculpted into the face itself (no separate nose sphere).
-    const rows=[[2.619,.027,.047,-.049],[2.65,.111,.115,-.036],[2.70,.159,.146,-.018],[2.77,.185,.159,-.002],[2.86,.194,.169,.005],[2.96,.187,.164,.010],[3.028,.151,.139,.019],[3.071,.082,.094,.023],[3.086,.004,.006,.025]];
+    const rows=[[2.619,.048,.056,-.049],[2.638,.100,.098,-.042],[2.659,.141,.127,-.031],[2.687,.163,.145,-.021],[2.73,.172,.154,-.010],[2.79,.178,.161,.001],[2.86,.184,.169,.005],[2.96,.179,.164,.010],[3.028,.148,.139,.019],[3.071,.082,.094,.023],[3.086,.004,.006,.025]];
     function shape(y){const [w,d,z]=sample(rows,y);return[w*(manager?1.065:worker?1.035:1),d,z];}
-    const sc=(x,y)=>-.032*gauss(x,y,0,2.837,.024,.076)-.043*gauss(x,y,0,2.796,.029,.024)
-      -.020*(gauss(x,y,.029,2.783,.015,.012)+gauss(x,y,-.029,2.783,.015,.012))
-      -.015*gauss(x,y,0,2.732,.086,.034)-.018*gauss(x,y,0,2.670,.079,.027)
-      -.025*gauss(Math.abs(x),y,.123,2.826,.048,.031)+.009*gauss(Math.abs(x),y,.139,2.768,.038,.028)+.012*gauss(Math.abs(x),y,.079,2.873,.044,.025)
+    const sc=(x,y)=>-.029*gauss(x,y,0,2.838,.021,.072)-.038*gauss(x,y,0,2.793,.027,.024)
+      -.014*(gauss(x,y,.026,2.781,.014,.012)+gauss(x,y,-.026,2.781,.014,.012))
+      -.005*gauss(x,y,0,2.780,.020,.013)
+      -.010*gauss(x,y,0,2.732,.080,.034)-.014*gauss(x,y,0,2.664,.068,.024)
+      -.013*gauss(Math.abs(x),y,.119,2.826,.045,.035)+.006*gauss(Math.abs(x),y,.134,2.768,.042,.035)+.010*gauss(Math.abs(x),y,.079,2.873,.044,.025)
       -.011*gauss(Math.abs(x),y,.080,2.902,.07,.019)
-      +.005*gauss(Math.abs(x),y,.045+(2.78-y)*.52,2.755,.008,.033)
+      +.0013*gauss(Math.abs(x),y,.045+(2.78-y)*.52,2.755,.012,.033)
       -.0028*gauss(Math.abs(x),y,.010,2.756,.004,.013);
-    function faceZ(x,y){const [w,d,z]=shape(y),q=Math.sqrt(clamp(1-(x/w)**2));return z-d*q+sc(x,y)*q*q;}
-    function scalp(a,y){const [w,d,z]=shape(y),h=cos(a),x=w*sin(a);return[x,y,z-d*h+sc(x,y)*Math.max(0,h)**2];}
+    const sectionPower=y=>2+.38*(1-smooth(2.73,2.85,y));
+    function faceZ(x,y){const [w,d,z]=shape(y),power=sectionPower(y),q=clamp(1-Math.abs(x/w)**power)**(1/power);return z-d*q+sc(x,y)*q*q;}
+    function scalp(a,y){const [w,d,z]=shape(y),power=2/sectionPower(y),s=sin(a),c=cos(a),h=Math.sign(c)*Math.abs(c)**power,x=w*Math.sign(s)*Math.abs(s)**power;return[x,y,z-d*h+sc(x,y)*Math.max(0,h)**2];}
     m.bone('head');
     const blush=blend(P.skin,P.lip,.55),shadow=blend(P.lip,P.skin,.46);
     const faceAngle=u=>Math.atan2(.48*sin(u*TAU),cos(u*TAU));
-    m.surface((u,v)=>scalp(faceAngle(u),lerp(rows[0][0],rows.at(-1)[0],v)),128,104,(u,v,p)=>{
+    m.surface((u,v)=>scalp(faceAngle(u),lerp(rows[0][0],rows.at(-1)[0],v)),112,96,(u,v,p)=>{
       const f=Math.max(0,cos(faceAngle(u))),x=Math.abs(p[0]),y=p[1];
-      let c=blend(P.skin,blush,f*(.27*gauss(x,y,.126,2.805,.049,.051)+.34*gauss(p[0],y,0,2.79,.043,.027)));
-      c=blend(c,shadow,f*(.23*gauss(x,y,.080,2.887,.048,.012)+.15*gauss(x,y,.079,2.847,.045,.010)+.18*gauss(x,y,.033,2.777,.012,.007)));
-      c=blend(c,tint(P.skin,.86),f*.20*gauss(p[0],y,0,2.697,.070,.009));
+      let c=blend(P.skin,blush,f*(.17*gauss(x,y,.123,2.805,.049,.051)+.20*gauss(p[0],y,0,2.79,.043,.027)));
+      c=blend(c,shadow,f*(.16*gauss(x,y,.080,2.887,.048,.012)+.08*gauss(x,y,.079,2.847,.045,.010)+.12*gauss(x,y,.033,2.777,.012,.007)));
+      c=blend(c,tint(P.skin,.90),f*.12*gauss(p[0],y,0,2.693,.068,.015));
       if(manager&&y<2.763){
         const jaw=clamp((2.738-y)/.048),cheeks=smooth(.095,.15,x)*clamp((2.79-y)/.050);
         const g=clamp(Math.max(jaw,cheeks))*.77*clamp(f*2);
@@ -179,23 +182,23 @@
       return c;
     },skin);
     for(const s of [-1,1]){
-      const ex=s*(manager?.197:.186);
-      m.ell(ex,2.815,.006,.030,.059,.028,P.skin,skin,22,15);
-      m.ell(ex+s*.022,2.818,-.011,.009,.032,.018,blend(P.skin,P.lip,.38),skin,18,12);
-      m.tube(t=>[ex+s*(.023+.006*sin(t*Math.PI)),2.785+.066*t,-.015+.013*sin(Math.PI*t)],t=>.003+.002*sin(Math.PI*t),P.skin,skin,20,7);
-      m.ell(ex+s*.019,2.798,-.018,.008,.011,.009,tint(P.skin,.91),skin,14,8);
+      const ex=s*(manager?.187:.177);
+      m.ell(ex,2.815,.006,.026,.059,.027,P.skin,skin,22,15);
+      m.ell(ex+s*.019,2.818,-.011,.008,.032,.017,blend(P.skin,P.lip,.32),skin,18,12);
+      m.tube(t=>[ex+s*(.020+.005*sin(t*Math.PI)),2.785+.066*t,-.015+.013*sin(Math.PI*t)],t=>.003+.0015*sin(Math.PI*t),P.skin,skin,20,7);
+      m.ell(ex+s*.016,2.798,-.018,.007,.011,.009,tint(P.skin,.93),skin,14,8);
     }
-    const eyeY=manager?2.865:2.87,eyeX=manager?.080:.077,ew=manager?.044:.043,top=manager?.018:.020,bot=manager?.011:.012;
+    const eyeY=manager?2.865:2.87,eyeX=manager?.081:.079,ew=manager?.044:.043,top=manager?.018:.020,bot=manager?.011:.012;
     for(const s of [-1,1]){
       const X=s*eyeX,mid=k=>eyeY+.004*s*k,rad=k=>Math.max(0,1-k*k)**.77;
-      function ez(x,y){const k=clamp((x-X)/ew,-1,1),r=rad(k),off=y-mid(k);return faceZ(x,y)-.003-.017*Math.max(0,1-k*k-(off/(off>=0?top:bot))**2);}
+      function ez(x,y){const k=clamp((x-X)/ew,-1,1),r=rad(k),off=y-mid(k);return faceZ(x,y)-.003-.014*Math.max(0,1-k*k-(off/(off>=0?top:bot))**2);}
       m.surface((u,v)=>{const k=2*u-1,r=rad(k),x=X+ew*k,y=mid(k)+lerp(-bot,top,v)*r;return[x,y,ez(x,y)];},28,12,(u,v)=>blend(col('eee8dd'),col('d9b6a7'),.22*Math.abs(2*u-1)**4),enamel);
       const irisX=X-s*.002,irisY=eyeY+.003;
       function disk(cx,cy,rx,ry,color,lift,material=enamel){m.surface((u,v)=>{const a=u*TAU,r=.0001+v*.9999,x=cx+rx*sin(a)*r,y=cy+ry*cos(a)*r;
         const k=(x-X)/ew,yy=clamp(y,mid(k)-bot*rad(k)+.0002,mid(k)+top*rad(k)-.0002);return[x,yy,ez(x,yy)-lift];},material===iris?32:24,material===iris?8:4,color,material);}
-      disk(irisX,irisY,.0192,.0198,col('3a3027'),.0009);
-      disk(irisX,irisY,.0179,.0186,(u,v)=>blend(P.iris,col('a17b43'),.27+.19*sin(u*TAU*29+v*9)**2),.0015,iris);
-      disk(irisX,irisY,.0080,.0090,col('191b20'),.0022);
+      disk(irisX,irisY,.0204,.0210,col('3a3027'),.0009);
+      disk(irisX,irisY,.0190,.0198,(u,v)=>blend(P.iris,col('a17b43'),.19+.16*sin(u*TAU*29+v*9)**2),.0015,iris);
+      disk(irisX,irisY,.0087,.0096,col('191b20'),.0022);
       disk(irisX-.004,irisY+.0045,.0032,.0031,col('fff9e9'),.0029);
       disk(irisX+.005,irisY-.004,.0013,.0015,col('b8d2e3'),.0028);
       function lid(t,upper,shift=0){const k=t*2-1,x=X+k*ew,y=mid(k)+(upper?top:-bot)*rad(k)+shift;return[x,y,faceZ(x,y)-.004];}
@@ -208,8 +211,8 @@
         return[x,y,faceZ(x,y)-.004-.001*sin(Math.PI*v)];
       },26,9,P.skin,skin);
       m.bone('head');
-      const brow=t=>{const x=s*(.027+t*.112),y=arch(2.907,2.897,manager?.008:.011,t)+(manager?.005*(1-t):.003*t);return[x,y,faceZ(x,y)-.004];};
-      m.surface((u,v)=>{const p=brow(u),th=(.001+.0068*sin(Math.PI*(.12+.86*u)))*(1.05-.35*u),y=p[1]+(v-.48)*2*th;return[p[0],y,faceZ(p[0],y)-.002-.003*sin(Math.PI*v)];},24,6,P.hair,hair,s<0);
+      const brow=t=>{const x=s*(.030+t*.105),y=arch(2.907,2.898,manager?.008:.009,t)+(manager?.005*(1-t):.003*t);return[x,y,faceZ(x,y)-.004];};
+      m.surface((u,v)=>{const p=brow(u),th=(.0012+.0088*sin(Math.PI*(.12+.86*u)))*(1.05-.35*u),y=p[1]+(v-.48)*2*th;return[p[0],y,faceZ(p[0],y)-.002-.003*sin(Math.PI*v)];},24,6,P.hair,hair,s<0);
       for(let i=0;i<20;i++){
         const t=(i+.5)/20,q=brow(t),height=.002+.006*sin(Math.PI*t);
         m.tube(v=>{const x=q[0]+s*(v-.5)*.004,y=q[1]+(v-.5)*height;return[x,y,faceZ(x,y)-.0035];},.00025,blend(P.hair,P.strand,.16+.12*(i%3)/3),hair,3,4);
@@ -226,14 +229,14 @@
         const x=s*(.001+.071*u),y=arch(2.758,2.746,.003,u)-v*(.005+.004*sin(Math.PI*u));
         return[x,y,faceZ(x,y)-.001-.002*sin(v*Math.PI)];},24,6,(u,v)=>blend(pepper,salt,.25+.11*sin(u*51+v*4)**2),hair,s>0);
     }
-    const lipW=manager?.070:.071,seam=x=>mouthHeight+.001*(x/lipW)**2;
+    const lipW=manager?.070:.071,seam=x=>mouthHeight+.0023*(x/lipW)**2;
     function lips(part){m.bone(part==='bottom'?'lip':part==='inside'?'mouth':'head');m.surface((u,v)=>{
       const k=u*2-1,x=k*lipW,r=Math.max(0,1-k*k),base=seam(x);
       let y;if(part==='inside')y=base+lerp(-.027,.0005,v)*r;
       else if(part==='bottom')y=base-r*.010*(1-v);
       else y=base+r*v*(.007+.003*Math.exp(-((Math.abs(k)-.27)**2)/.033));
       const z=faceZ(x,y)-(part==='inside'?.002:.007+(part==='bottom'?.003:.002)*sin(Math.PI*v))*r;
-      return[x,y,z];},32,8,part==='inside'?col('583637'):blend(P.skin,P.lip,part==='bottom'?.49:.44),skin,false,
+      return[x,y,z];},32,8,part==='inside'?col('583637'):blend(P.skin,P.lip,part==='bottom'?.43:.38),skin,false,
         part==='upper'?()=>[boneIndex.head,boneIndex.head,0]:undefined);}
     lips('upper');lips('inside');lips('bottom');
     m.bone('teeth');m.surface((u,v)=>{
@@ -251,11 +254,11 @@
     // Interpolate the hand-cut hairline around temples and ears. A crescent of
     // forehead is exposed at the part, while the fringe sweeps down the other side.
     const cut=[[-3.142,2.784],[-2.38,2.804],[-1.83,2.853],[-1.57,2.872],[-1.38,2.837],[-1.19,2.91],[-.90,2.943],[-.61,2.931],[-.30,2.956],[.12,2.965],[.47,2.980],[.64,2.958],[.78,2.95],[1.11,2.932],[1.36,2.842],[1.55,2.874],[1.90,2.851],[2.4,2.805],[3.142,2.784]];
-    function hairline(a){return sample(cut,Math.atan2(sin(a),cos(a)))[0]+(manager?.009:0);}
+    function hairline(a){return sample(cut,Math.atan2(sin(a),cos(a)))[0]+(manager?.009:0)+(worker?0:.029*Math.max(0,cos(a))**2);}
     function cap(a,v,raised=0){
       const f=cos(a),low=hairline(a),ang=v*Math.PI*.5,ys=lerp(low,3.084,sin(ang)),p=scalp(a,ys);
-      const sweep=Math.max(0,f)*(.55-.32*sin(a)),bulge=sin(Math.PI*v),th=.011*(1-v)+.019*bulge+(manager?.014:.035)*bulge*sweep;
-      return[p[0]+sin(a)*(th+raised)-.021*v,p[1]+(.017+(manager?.003:.039)*sweep)*sin(ang)+raised*(.15+.85*v),p[2]-f*(th+raised)-.012*bulge*sweep];
+      const sweep=Math.max(0,f)*(.58-.28*sin(a)),bulge=sin(Math.PI*v),wave=sin(Math.PI*v*.88),th=.011*(1-v)+.022*bulge+(manager?.016:.045)*bulge*sweep;
+      return[p[0]+sin(a)*(th+raised)-.024*v,p[1]+(.019+(manager?.006:.051)*sweep)*sin(ang)+raised*(.15+.85*v),p[2]-f*(th+raised)-.018*wave*sweep];
     }
     if(worker){
       m.surface((u,v)=>{const a=u*TAU,y=lerp(Math.min(2.927,hairline(a)),2.937,v),p=scalp(a,y);return[p[0]+.006*sin(a),y,p[2]-.006*cos(a)];},44,8,P.hair,hair);
@@ -265,9 +268,10 @@
     // The side part and broad swept locks follow the scalp in 3D; tapered relief
     // reads in the crown and the nape, without a flat painted-on hair silhouette.
     if(!worker){
-      for(let i=0;i<22;i++){const start=-Math.PI+TAU*i/22,front=Math.max(0,cos(start)),sweep=start<.65?1:-1,amp=(.15+front*.47)*(manager?.85:1);
-        m.surface((u,v)=>{const taper=sin(Math.PI*v)**.65,t=.008+.95*v,a=start+sweep*amp*sin(Math.PI*v*.84)+.027*sin(v*TAU+start)+(u-.5)*(.15+.24*front)*taper;
-          return cap(a,t,.0007+sin(Math.PI*u)*taper*(.005+.014*front));},6,17,(u,v)=>blend(P.hair,P.strand,(.05+.48*sin(Math.PI*u)*sin(Math.PI*v))*(manager?1:.78)),hair);
+      for(let i=0;i<18;i++){const start=-Math.PI+TAU*(i+.09*sin(i*2.4))/18,front=Math.max(0,cos(start)),sweep=start<.65?1:-1,amp=(.18+front*.72)*(manager?.85:1),fullness=.80+.20*sin(i*1.9)**2;
+        const lock=(u,v)=>{const taper=sin(Math.PI*v)**.65,t=.008+.95*v,a=start+sweep*amp*sin(Math.PI*v*.84)+(.035+.065*front)*sin(v*TAU+start)+(u-.5)*(.20+.24*front)*taper;
+          return cap(a,t,.0007+sin(Math.PI*u)*taper*(.006+.020*front)*fullness);};
+        m.surface(lock,7,18,(u,v)=>blend(P.hair,P.strand,(.04+.38*sin(Math.PI*u)*sin(Math.PI*v))*(manager?1:.78)),hair);
       }
     } else {
       const gold=col('f4ab30'),goldHi=col('ffd25b');
