@@ -27,7 +27,7 @@
     }
     return shuffled;
   }
-  let engine=null,near=null,toastTimer=null,speechTimer=null,speechToken=0;
+  let engine=null,near=null,toastTimer=null,speechTimer=null,speechToken=0,resetJoystick=()=>{};
   const phoneInput=matchMedia('(any-pointer: coarse)');
   const hudPanels=[['missionCard','missionToggle'],['quickbar','workToggle']];
   let phoneUi=false,activeHudPanel=null;
@@ -129,7 +129,7 @@
 
     $('#quickContent').innerHTML=q;
   }
-  function intro(){setStage('welcome');show(`<div class="modal-label">MISSÃO 01 · ESTOQUE</div><h2 id="modalTitle" class="modal-title">O sistema diz uma coisa. O galpão, outra.</h2><p class="modal-desc">Você foi contratado para conferir o estoque da Aurora. Seu papel é buscar provas antes de concluir se as contas estão corretas.</p><div class="twoCol"><div class="miniCard"><h3>1 · Ouça e planeje</h3><p>Converse com Marcos. Escolha testes dentro dos 8 créditos disponíveis.</p></div><div class="miniCard"><h3>2 · Confira e conclua</h3><p>Faça os testes nos círculos laranja. Reúna os resultados e escolha seu relatório.</p></div></div><div class="notice"><b>Como jogar:</b> WASD para andar; arraste para girar a câmera. Q conversa ou abre testes. E senta, levanta, abre ou fecha portas e conversa com o trabalhador. F consulta o tablet por 3 segundos, apenas como animação. No celular, use os botões na tela.<br>Missão e Trabalho mostram sua tarefa e saldo. Localizar objetivo aponta o caminho, sem mover você. Você pode errar e tentar novamente.</div><div class="buttons"><button class="primary" id="startMission">Procurar Marcos →</button></div>`);$('#startMission').onclick=()=>{hide();setStage('interview');note('Encontre Marcos na sala de reunião. Use Localizar objetivo para se orientar.');};}
+  function intro(){setStage('welcome');show(`<div class="modal-label">MISSÃO 01 · ESTOQUE</div><h2 id="modalTitle" class="modal-title">O sistema diz uma coisa. O galpão, outra.</h2><p class="modal-desc">Você foi contratado para conferir o estoque da Aurora. Seu papel é buscar provas antes de concluir se as contas estão corretas.</p><div class="twoCol"><div class="miniCard"><h3>1 · Ouça e planeje</h3><p>Converse com Marcos. Escolha testes dentro dos 8 créditos disponíveis.</p></div><div class="miniCard"><h3>2 · Confira e conclua</h3><p>Faça os testes nos círculos laranja. Reúna os resultados e escolha seu relatório.</p></div></div><div class="notice"><b>Como jogar:</b> WASD para andar; segure C junto para correr. Arraste para girar a câmera. Q conversa ou abre testes. E senta, levanta, abre ou fecha portas e conversa com o trabalhador. F consulta o tablet por 3 segundos, apenas como animação. No celular/tablet, arraste o controle circular: as oito direções seguem a câmera. Puxe mais longe para acelerar; solte para parar. Segure C junto para correr.<br>Missão e Trabalho mostram sua tarefa e saldo. Localizar objetivo aponta o caminho, sem mover você. Você pode errar e tentar novamente.</div><div class="buttons"><button class="primary" id="startMission">Procurar Marcos →</button></div>`);$('#startMission').onclick=()=>{hide();setStage('interview');note('Encontre Marcos na sala de reunião. Use Localizar objetivo para se orientar.');};}
 
   const interview=[
     {s:'Bom dia! Nossa contagem encontrou menos produtos do que o sistema registra. Pode ser uma falha na contagem ou nos registros. Por onde você começaria?',opts:[
@@ -227,10 +227,12 @@
 
   function updateNearbyAction(){if(!engine)return;const spots=relevantSpots();const nearby=spots.map(h=>({...h,dist:engine.distance(h.x,h.z)})).sort((a,b)=>a.dist-b.dist);near=nearby[0]||null;
     const blocked=st.modal||st.dialogueOpen;
+    const stickDisabled=!engine.canUseJoystick();$('#moveStick').setAttribute('aria-disabled',String(stickDisabled));if(stickDisabled)resetJoystick();
     let physical=blocked?null:engine.physicalAction?.();
     if(physical&&engine.seating?.phase==='aligning')physical={...physical,label:'Posicionando…',hint:'Aguarde o auditor se posicionar para sentar.',disabled:true};
     if(physical&&engine.seating?.phase==='leaving')physical={...physical,label:'Saindo…',hint:'Aguarde o auditor se afastar da cadeira.',disabled:true};
     $('#actionBtn').disabled=!!(engine.seating||engine.tabletRead||engine.workerTalk||engine.vehicleSeat);$('#reportBtn').disabled=!!(engine.seating||engine.tabletRead||engine.workerTalk||engine.vehicleSeat);
+    $('#runBtn').disabled=blocked||!!(engine.seating||engine.tabletRead||engine.workerTalk||engine.vehicleSeat);$('#runBtn').setAttribute('aria-pressed',String(!!engine.keys.c));
     $('#tabletBtn').disabled=blocked||!!engine.tabletRead||!!engine.workerTalk||!!(engine.vehicleSeat&&engine.vehicleSeat.phase!=='driving')||!!(engine.seating&&engine.seating.phase!=='seated');
     if(physical&&engine.tabletRead&&engine.vehicleSeat?.phase!=='driving')physical={...physical,disabled:true};
     $('#action').classList.toggle('visible',!blocked&&!engine.seating&&!engine.workerTalk&&!engine.vehicleSeat&&!!near&&near.dist<=2.85);
@@ -241,11 +243,36 @@
       $('#physicalBtn').textContent=physical.label;$('#physicalBtn').disabled=!!physical.disabled;
       $('#physicalBtn').setAttribute('aria-label',`${physical.label}: ${physical.title}`);
     }
-    const help=$('#controlHelp');if(!help.dataset.footText)help.dataset.footText=help.innerHTML;const mode=engine.vehicleSeat?'vehicle':'foot';if(help.dataset.mode!==mode){help.dataset.mode=mode;help.innerHTML=mode==='vehicle'?'W / S: frente e ré · A / D: virar · setas curvas: câmera · F: tablet · E: sair':help.dataset.footText;}
+    const help=$('#controlHelp');if(!help.dataset.footText)help.dataset.footText=help.innerHTML;const mode=engine.vehicleSeat?'vehicle':'foot';if(help.dataset.mode!==mode){help.dataset.mode=mode;help.innerHTML=mode==='vehicle'?'W / S ou controle circular: frente e ré · A / D ou laterais: virar · setas curvas: câmera · F: tablet · E: sair':help.dataset.footText;}
     $('#location').textContent=engine.player.x>16.75?'● Galpão de expansão':engine.player.x>0?'● Centro de distribuição':'● Escritório de auditoria';}
   let refreshTimer=0;
   function bindTouchControls() {
     const pressedPointers = new Map();
+    const stick=$('#moveStick'),thumb=stick.querySelector('.stick-thumb');
+    let stickPointer=null,geometry=null;
+    resetJoystick=()=>{
+      const pointer=stickPointer;stickPointer=null;geometry=null;engine.setJoystick(0,0);
+      stick.dataset.active='false';stick.dataset.dragging='false';thumb.style.removeProperty('--stick-x');thumb.style.removeProperty('--stick-y');
+      if(pointer!==null&&stick.hasPointerCapture?.(pointer))stick.releasePointerCapture(pointer);
+    };
+    const moveStick=event=>{
+      if(event.pointerId!==stickPointer)return;
+      event.preventDefault();
+      if(!engine.canUseJoystick()){resetJoystick();return;}
+      let x=event.clientX-geometry.x,y=event.clientY-geometry.y;
+      const distance=Math.hypot(x,y),scale=Math.min(1,geometry.radius/(distance||1));x*=scale;y*=scale;
+      thumb.style.setProperty('--stick-x',x+'px');thumb.style.setProperty('--stick-y',y+'px');
+      engine.setJoystick(x/geometry.radius,y/geometry.radius);stick.dataset.active=String(!!engine.joystick);
+    };
+    stick.addEventListener('touchstart',event=>{if(event.cancelable)event.preventDefault();},{passive:false});
+    stick.addEventListener('pointerdown',event=>{
+      if(stickPointer!==null||(event.pointerType==='mouse'&&event.button!==0)||!engine.canUseJoystick())return;
+      event.preventDefault();window.getSelection()?.removeAllRanges();
+      const bounds=stick.getBoundingClientRect();geometry={x:bounds.left+bounds.width/2,y:bounds.top+bounds.height/2,radius:(stick.clientWidth-thumb.offsetWidth)/2};
+      stickPointer=event.pointerId;stick.dataset.dragging='true';stick.setPointerCapture?.(event.pointerId);moveStick(event);
+    });
+    stick.addEventListener('pointermove',moveStick);
+    for(const type of ['pointerup','pointercancel','lostpointercapture'])stick.addEventListener(type,event=>{if(event.pointerId===stickPointer){if(event.cancelable)event.preventDefault();resetJoystick();}});
     const release = event => {
       const pressed = pressedPointers.get(event.pointerId);
       if (!pressed) return;
@@ -255,6 +282,7 @@
       engine.setInput(pressed.key, stillPressed);
     };
     const reset = () => {
+      resetJoystick();
       const pressed = [...pressedPointers.entries()];
       pressedPointers.clear();
       for (const [pointerId, input] of pressed) {
@@ -284,6 +312,7 @@
     document.addEventListener('pointercancel', release);
     window.addEventListener('blur', reset);
     window.addEventListener('pagehide', reset);
+    window.addEventListener('resize', reset);
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) reset();
     });
@@ -298,7 +327,15 @@
     catch(e){console.error(e);$('#fallback').hidden=false;$('#fallback').style.display='grid';return;}
     $('#quality').onclick=()=>{engine.setEco(!engine.low);$('#quality').textContent=engine.low?'⚙ Eco ✓':'⚙ Eco';note(engine.low?'Modo econômico: imagem mais simples para jogar com mais fluidez.':'Imagem em qualidade padrão.')};
     $('#exit').onclick=()=>{if(window.parent!==window){parent.postMessage({type:'scai:exit'},'*')}else location.href='../SCAI.html'};
-    $('#tabletBtn').onclick=()=>{engine.consultTablet();updateNearbyAction();};$('#actionBtn').onclick=()=>interact(near);$('#physicalBtn').onclick=()=>{if(st.modal||st.dialogueOpen)return;engine.usePhysical();updateNearbyAction();};$('#routeBtn').onclick=()=>{closeHudPanels();guide();};$('#reportBtn').onclick=reportModal;$('#modalClose').onclick=()=>{hide();if(st.stage==='welcome')setStage('interview')};
+    // Secondary touch pointers do not generate click while the stick is held.
+    const bindTap=(selector,action)=>{const button=$(selector);
+      button.addEventListener('pointerdown',event=>{if(button.disabled||(event.pointerType==='mouse'&&event.button!==0))return;event.preventDefault();action();});
+      button.addEventListener('touchstart',event=>{if(event.cancelable)event.preventDefault();},{passive:false});
+      button.onclick=event=>{if(event.detail===0&&!button.disabled)action();};
+    };
+    bindTap('#tabletBtn',()=>{engine.consultTablet();updateNearbyAction();});
+    bindTap('#actionBtn',()=>interact(near));bindTap('#physicalBtn',()=>{if(st.modal||st.dialogueOpen)return;engine.usePhysical();updateNearbyAction();});
+    $('#routeBtn').onclick=()=>{closeHudPanels();guide();};$('#reportBtn').onclick=reportModal;$('#modalClose').onclick=()=>{hide();if(st.stage==='welcome')setStage('interview')};
     bindTouchControls();
     document.addEventListener('keydown',e=>{if(st.dialogueSpeaker==='worker'&&(e.key.toLowerCase()==='e'||e.key==='Escape')&&!st.speaking){e.preventDefault();endDialogue();return;}if(e.key==='Escape'&&st.modal&&st.stage!=='result')hide();});
     intro();}

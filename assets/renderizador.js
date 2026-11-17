@@ -200,9 +200,9 @@
       if(engine.cameraOverlaps(bounds,this.hiddenActors.has(role)?.06:0)){this.hiddenActors.add(role);return false;}
       this.hiddenActors.delete(role);return true;
     }
-    drawPerson(x,z,time,walking,role,dir,mouth,walkDistance,blinkClock=time,seatBlend=0,tabletRead=null,headLook=0,driving=null){
+    drawPerson(x,z,time,walking,role,dir,mouth,walkDistance,blinkClock=time,seatBlend=0,tabletRead=null,headLook=0,driving=null,gait=null){
       const gl=this.gl, actor=this.actors[role];
-      const pose=SCAIPeople.pose(x,z,time,walking,role,dir,mouth,walkDistance,blinkClock,seatBlend,tabletRead?.blend||0,headLook,driving);
+      const pose=SCAIPeople.pose(x,z,time,walking,role,dir,mouth,walkDistance,blinkClock,seatBlend,tabletRead?.blend||0,headLook,driving,gait);
       gl.uniform1f(this.uniform.TabletTime,role==='auditor'&&tabletRead?.screen?tabletRead.elapsed-.55:-1);
       for(let i=0;i<actor.bones.length;i++)this.boneMatrices.set(pose[actor.bones[i]],i*16);
       gl.uniformMatrix4fv(this.uniform['Bones[0]'],false,this.boneMatrices);
@@ -313,7 +313,7 @@
       gl.depthMask(true); gl.disable(gl.BLEND);
       this.drawForklift(engine);
       gl.uniform1i(this.uniform.Actor,1);
-      if(!focus&&!engine.hidePlayer)this.drawPerson(p.x,p.z,engine.t,engine.walking,'auditor',p.dir,false,engine.walkDistance,blinkClock,engine.vehicleSeat?.blend||engine.seating?.blend||0,engine.tabletRead,0,engine.vehicleSeat?{...engine.vehicleSeat,steer:engine.forklift.steer}:null);
+      if(!focus&&!engine.hidePlayer)this.drawPerson(p.x,p.z,engine.t,engine.walking,'auditor',p.dir,false,engine.walkDistance,blinkClock,engine.vehicleSeat?.blend||engine.seating?.blend||0,engine.tabletRead,0,engine.vehicleSeat?{...engine.vehicleSeat,steer:engine.forklift.steer}:null,engine.gait);
       if(this.personVisible(engine,-10.7,-5.2,'manager',Math.PI))this.drawPerson(-10.7,-5.2,engine.t,false,'manager',Math.PI,!!engine.events.isTalking?.(),undefined,blinkClock);
       if((!focus||engine.workerTalk)&&this.personVisible(engine,worker.x,worker.z,'worker',worker.dir,true))this.drawPerson(worker.x,worker.z,engine.t,false,'worker',worker.dir,!!engine.events.isWorkerTalking?.(),undefined,blinkClock,1,null,engine.workerTalk?.look||0);
       this.drawTransparent(engine);

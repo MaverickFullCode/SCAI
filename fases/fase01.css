@@ -157,12 +157,16 @@ button:disabled { cursor: not-allowed; }
 @media (pointer: coarse), (max-width: 900px) {
   #touchControls { position: absolute; z-index: 6; bottom: max(10px, env(safe-area-inset-bottom)); left: var(--screen-edge); right: var(--screen-edge); display: flex; justify-content: space-between; align-items: end; pointer-events: none; }
   #touchControls button { height: 42px; width: 43px; border: 1px solid #b9cadbb0; border-radius: 6px; background: #17314bbd; color: #f7f5ec; font-weight: 700; font-size: 16px; pointer-events: auto; touch-action: none; }
-  .dpad { display: grid; justify-items: center; gap: 4px; }
-  .dpad > div, .look { display: flex; gap: 4px; }
-  #location { bottom: 104px; }
+  .look { display: flex; gap: 4px; }
+  .move-stick { --stick-size:132px; --thumb-size:54px; position:relative; flex:0 0 var(--stick-size); width:var(--stick-size); height:var(--stick-size); border:1px solid #e7f2fc65; border-radius:50%; background:#18334b18; box-shadow:inset 0 0 18px #e6f2ff12, 0 1px 8px #0b20351a; pointer-events:auto; touch-action:none; }
+  .stick-thumb { position:absolute; left:50%; top:50%; width:var(--thumb-size); height:var(--thumb-size); border:1px solid #eef7ff8a; border-radius:50%; background:#d7eafa2b; box-shadow:inset 0 1px 7px #ffffff20, 0 2px 8px #0b203522; transform:translate(calc(-50% + var(--stick-x, 0px)), calc(-50% + var(--stick-y, 0px))); pointer-events:none; transition:transform .12s ease-out; }
+  .move-stick[data-dragging="true"] .stick-thumb { transition:none; }
+  .move-stick[data-active="true"] { border-color:#f0d1a482; background:#18334b20; }
+  .move-stick[aria-disabled="true"] { opacity:.4; }
+  #location { bottom: 158px; }
   #controlHelp { display: none; }
-  .action { bottom: 105px; }
-  .toast { bottom: 157px; }
+  .action { bottom: 158px; }
+  .toast { bottom: 210px; }
 }
 @media (max-width: 620px) {
   :root { --screen-edge: max(8px, env(safe-area-inset-left), env(safe-area-inset-right)); --hud-top: max(7px, env(safe-area-inset-top)); }
@@ -180,7 +184,8 @@ button:disabled { cursor: not-allowed; }
   #quickbar { width: calc(42% - 7px); }
   #quickContent { font-size: 11px; }
   .route, #game:not(.phone-ui) #quickbar:has(#reportBtn[hidden]) .route { font-size: 11px; padding: 8px; }
-  .action { bottom: 99px; }
+  .move-stick { --stick-size:120px; --thumb-size:50px; }
+  #location, .action { bottom: 146px; }
   #game:has(.action.visible) #location { visibility: hidden; }
   .dialogue-panel { padding: 6px max(10px, env(safe-area-inset-left)) max(7px, env(safe-area-inset-bottom)); }
   .dialogue-heading, .dialogue-heading span:last-child { font-size: 9px; }
@@ -198,8 +203,13 @@ button:disabled { cursor: not-allowed; }
   #objectiveText { font-size: 11px; }
   #missionCard, #quickbar { padding-block: 7px; }
   #touchControls button { height: 35px; width: 38px; }
-  #location, .action { bottom: 86px; }
+  .move-stick { --stick-size:96px; --thumb-size:42px; }
+  #location, .action { bottom: 120px; }
   .modalCard { max-height: 98%; }
+}
+@media (max-width:360px) {
+  .move-stick { --stick-size:116px; --thumb-size:48px; }
+  #touchControls .look button { width:36px; }
 }
 #game.phone-ui #topHud { display: grid; grid-template-columns: auto 1fr; gap: 6px; }
 #game.phone-ui .brand { grid-column: 1; grid-row: 1; }
@@ -242,16 +252,16 @@ button:disabled { cursor: not-allowed; }
 #game:has(#action.visible) #physicalAction { bottom: calc(var(--physical-bottom, max(16px, env(safe-area-inset-bottom))) + 61px); }
 #game:has(.action.visible) #controlHelp { visibility: hidden; }
 @media (pointer: coarse), (max-width: 900px) {
-  #game { --physical-bottom: 105px; }
+  #game { --physical-bottom: 158px; }
 }
 @media (max-width: 620px) {
-  #game { --physical-bottom: 99px; }
+  #game { --physical-bottom: 146px; }
   #physicalAction { width: calc(100% - 24px); }
   #physicalAction .physical-copy { flex: 1; }
   #physicalAction b { white-space: normal; line-height: 1.2; }
 }
 @media (max-height: 480px) and (orientation: landscape) {
-  #game { --physical-bottom: 86px; }
+  #game { --physical-bottom: 120px; }
   #physicalAction small { display: none; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -266,3 +276,5 @@ button:disabled { cursor: not-allowed; }
 
 .tech:has(.plan-choice) { grid-template-columns:minmax(0, 1fr) auto; }
 #game:has(#modal:not([hidden])) #toast { visibility:hidden; }
+
+#touchControls #runBtn[aria-pressed="true"] { background:#c79548; color:#102b43; border-color:#f3cc83; }

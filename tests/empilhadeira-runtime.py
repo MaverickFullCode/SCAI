@@ -28,7 +28,7 @@ with sync_playwright() as pw:
     f.evaluate('Object.assign(qaEngine.forklift,{x:12.19,z:0,angle:0});qaEngine.shutter.open=qaEngine.shutter.target=1;qaEngine.yaw=-Math.PI/2;advance(1)')
     if profile=='computador':page.keyboard.down('w')
     else:
-     session=context.new_cdp_session(page);button=f.locator('#touchControls [data-key="w"]').bounding_box();session.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':button['x']+20,'y':button['y']+20}]})
+     session=context.new_cdp_session(page);button=f.locator('#moveStick').bounding_box();thumb=f.locator('.stick-thumb').bounding_box();session.send('Input.dispatchTouchEvent',{'type':'touchStart','touchPoints':[{'x':button['x']+button['width']/2,'y':button['y']+thumb['height']/2+1}]})
     f.evaluate('advance(240)')
     assert not f.locator('#tabletBtn').is_disabled()
     before_read=f.evaluate('qaEngine.forklift.x')
