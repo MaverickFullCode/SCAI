@@ -8,7 +8,7 @@ Aproxime-se do painel ao lado da porta metálica e use **E**, ou toque em **Abri
 
 O galpão foi deslocado lateralmente para alinhar sua lateral ao prédio existente e liberar a vista das janelas, mantendo o portão no lugar. A base da parede recebeu rodapé e vedação de concreto na junção com o piso; os dois caixilhos altos do galpão menor ficam inteiramente atrás da parede do portão.
 
-O galpão tem 80 × 55,34 unidades, teto a 10,8 unidades, paredes fechadas, treliças, luminárias e piso de concreto igual ao galpão anterior. O piso permanece livre de móveis e cargas; os pilares ficam junto às paredes. A empilhadeira existente permanece estática, para uma implementação futura.
+O galpão tem 80 × 55,34 unidades, teto a 10,8 unidades, paredes fechadas, treliças, luminárias e piso de concreto igual ao galpão anterior. O piso permanece livre de móveis e cargas; os pilares ficam junto às paredes. Na revisão atual da ramificação, a empilhadeira já permite E / Entrar, W/S para frente/ré e A/D para dirigir. E / Sair estaciona e faz o auditor desembarcar por um lado livre.
 
 ![Interior amplo com piso livre](previa-galpao-expansao.jpg)
 

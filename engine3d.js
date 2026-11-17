@@ -23,7 +23,7 @@
   const WORKER=CHAIRS.find(chair=>chair.occupant==='worker');
   const ease=value=>{const t=Math.max(0,Math.min(1,value));return t*t*(3-2*t);};
   const turn=(from,to,t)=>from+Math.atan2(Math.sin(to-from),Math.cos(to-from))*t;
-  const warehouse=global.SCAIWarehouse;
+  const warehouse=global.SCAIWarehouse,forkliftAPI=global.SCAIForklift;
   const WALL_BOXES=[
     ...(warehouse?.walls||[]),
     {x:0,z:-5.15,hx:.085,hz:2.55,top:5.42},{x:0,z:5.15,hx:.085,hz:2.55,top:5.42}
@@ -41,7 +41,7 @@
     {x:-3.4,z:-5.55,hx:1,hz:.28,top:2.30},
     ...[4.5,9.3,14.1].flatMap(x=>[-5.75,5.75].map(z=>({x,z,hx:1.55,hz:.68,top:5.25}))),
     {x:5.1,z:-1.4,hx:1.55,hz:.425,top:1.16},
-    {x:12.615,z:-1.35,hx:1.64,hz:.57,top:3.12},
+    ...(!forkliftAPI?[{x:12.615,z:-1.35,hx:1.64,hz:.57,top:3.12}]:[]),
     WORKER_DESK,
     {x:5.65,z:3.15,hx:.325,hz:.37,top:1.97},
     {x:15,z:1.4,hx:.38,hz:.31,top:2.45}
@@ -89,6 +89,7 @@
       this.seating = null;
       this.tabletRead = null;
       this.workerTalk = null;
+      this.forklift = forkliftAPI?.create();this.vehicleSeat=null;
       this.bind();this.resize();this.loop=this.loop.bind(this);requestAnimationFrame(this.loop);
     }
     bind() {
@@ -144,7 +145,7 @@
     setEco(val){this.low=!!val;this.resize()}
     setInput(key,val){this.keys[key]=val}
     consultTablet(){
-      if(this.paused||this.events.isBlocked?.()||this.tabletRead||this.workerTalk||(this.seating&&this.seating.phase!=='seated'))return false;
+      if(this.paused||this.events.isBlocked?.()||this.tabletRead||this.workerTalk||(this.vehicleSeat&&this.vehicleSeat.phase!=='driving')||(this.seating&&this.seating.phase!=='seated'))return false;
       this.tabletRead={elapsed:0,blend:0,screen:false};this.walking=false;return true;
     }
     updateTablet(dt){
@@ -165,6 +166,55 @@
         const gap=Math.hypot(Math.max(Math.abs(dx)-.325,0),Math.max(Math.abs(dz)-.37,0));
         return gap<=PLAYER_RADIUS+.09;
       }).sort((a,b)=>Math.hypot(a.x-p.x,a.z-p.z)-Math.hypot(b.x-p.x,b.z-p.z))[0]||null;
+    }
+    vehicleContact(){return !!forkliftAPI&&forkliftAPI.blocksPoint(this.forklift||forkliftAPI.initial,this.player.x,this.player.z,PLAYER_RADIUS+.075);}
+    vehicleSide(side){return forkliftAPI.point(this.forklift,forkliftAPI.seatX,side*1.08);}
+    vehicleRoute(target){
+      const v=this.forklift,start={x:this.player.x,z:this.player.z},points=[start,target,...[-1.62,2.5].flatMap(x=>[-1.12,1.12].map(z=>forkliftAPI.point(v,x,z)))],distance=points.map(()=>Infinity),previous=[],visited=new Set();distance[0]=0;
+      for(let step=0;step<points.length;step++){
+        let k=-1;for(let i=0;i<points.length;i++)if(!visited.has(i)&&(k<0||distance[i]<distance[k]))k=i;
+        if(k<0||!Number.isFinite(distance[k]))break;if(k===1){const path=[];for(let i=1;i!==0;i=previous[i])path.unshift(points[i]);return path;}visited.add(k);
+        for(let i=1;i<points.length;i++)if(!visited.has(i)){
+          const a=points[k],b=points[i],d=Math.hypot(b.x-a.x,b.z-a.z),steps=Math.max(1,Math.ceil(d/.06));let clear=true;
+          for(let j=1;j<=steps;j++)if(!this.canMove(a.x+(b.x-a.x)*j/steps,a.z+(b.z-a.z)*j/steps)){clear=false;break;}
+          if(clear&&distance[k]+d<distance[i]){distance[i]=distance[k]+d;previous[i]=k;}
+        }
+      }
+      return null;
+    }
+    vehicleEnvironment(){
+      const boxes=[...WALK_BOXES,...this.doorBoxes()];
+      if(warehouse&&(this.shutter?.open||0)*warehouse.layout.gateHeight<forkliftAPI.shape.height+.04)boxes.push({x:warehouse.layout.gateX,z:0,hx:.06,hz:warehouse.layout.gateHalfWidth,top:3.6});
+      return {boxes,circles:WALK_CIRCLES,inside:(x,z)=>warehouse?warehouse.walkInside(x,z):x>=-12.05&&x<=16.2&&z>=-7.08&&z<=7.04};
+    }
+    useVehicle(){
+      const v=this.forklift;
+      if(this.vehicleSeat){
+        if(this.vehicleSeat.phase!=='driving')return false;
+        v.speed=0;this.keys={};
+        const side=[this.vehicleSeat.side,-this.vehicleSeat.side].find(s=>{const p=this.vehicleSide(s);return this.canMove(p.x,p.z);});
+        if(!side){this.events.onNotice?.('Os dois lados estão bloqueados. Estacione com espaço ao lado para sair.');return false;}
+        Object.assign(this.vehicleSeat,{phase:'alighting',elapsed:0,side});return true;
+      }
+      for(const side of [-1,1].sort((a,b)=>{const x=this.vehicleSide(a),y=this.vehicleSide(b);return Math.hypot(x.x-this.player.x,x.z-this.player.z)-Math.hypot(y.x-this.player.x,y.z-this.player.z);})){
+        const target=this.vehicleSide(side);if(!this.canMove(target.x,target.z))continue;const path=this.vehicleRoute(target);if(!path)continue;
+        v.speed=0;this.vehicleSeat={phase:'approaching',side,path,pathIndex:0,moving:false,blend:0,progress:0,stepLift:0,grip:0,offsetZ:side*1.08};this.keys={};return true;
+      }
+      this.events.onNotice?.('A entrada está bloqueada. Aproxime-se de um lado livre.');return false;
+    }
+    updateVehicle(dt){
+      const seat=this.vehicleSeat,v=this.forklift;if(!seat||!v)return;
+      if(seat.phase==='approaching'){
+        if(this.followSeatPath(seat,dt)){seat.phase='boarding';seat.elapsed=0;seat.moving=false;seat.turnStart=this.player.dir;}
+      }else if(seat.phase==='driving'){
+        const angle=v.angle;forkliftAPI.move(v,dt,Number(!!(this.keys.w||this.keys.arrowup))-Number(!!(this.keys.s||this.keys.arrowdown)),Number(!!this.keys.d)-Number(!!this.keys.a),this.vehicleEnvironment());
+        this.yaw-=v.angle-angle;const p=forkliftAPI.point(v,forkliftAPI.seatX,0);Object.assign(this.player,{...p,dir:Math.PI/2+v.angle});
+      }else{
+        seat.elapsed+=dt;const t=Math.min(1,seat.elapsed/2.5),progress=seat.phase==='boarding'?t:1-t;
+        Object.assign(seat,forkliftAPI.boarding(progress,seat.side));
+        const p=forkliftAPI.point(v,forkliftAPI.seatX,seat.offsetZ);Object.assign(this.player,p);this.player.dir=seat.phase==='boarding'?turn(seat.turnStart,Math.PI/2+v.angle,ease(t/.12)):Math.PI/2+v.angle;
+        if(t===1){if(seat.phase==='boarding'){seat.phase='driving';this.yaw=-(Math.PI/2+v.angle);}else this.vehicleSeat=null;this.keys={};}
+      }
     }
     workerContact(){
       const p=this.player,gap=box=>Math.hypot(Math.max(Math.abs(p.x-box.x)-box.hx,0),Math.max(Math.abs(p.z-box.z)-box.hz,0));
@@ -203,9 +253,11 @@
       }
     }
     physicalAction(){
+      if(this.vehicleSeat)return{kind:'vehicle',title:'Empilhadeira',label:this.vehicleSeat.phase==='driving'?'Sair':this.vehicleSeat.phase==='alighting'?'Saindo…':'Entrando…',hint:this.vehicleSeat.phase==='driving'?'W/S: frente e ré · A/D: direção · E: sair':'Aguarde o auditor se posicionar.',disabled:this.vehicleSeat.phase!=='driving'};
       if(this.workerTalk)return{kind:'worker-busy',title:'Trabalhador do galpão',label:this.workerTalk.phase==='returning'?'Voltando ao trabalho…':'Aguarde…',hint:'A conversa começa quando o auditor estiver de frente à mesa.',disabled:true};
       const seat=this.seating;
       if(seat)return{kind:'stand',title:'Cadeira',label:seat.phase==='seated'?'Levantar':seat.phase==='aligning'?'Posicionando…':seat.phase==='sitting'?'Sentando…':seat.phase==='leaving'?'Saindo…':'Levantando…',hint:seat.phase==='seated'?'E para levantar da cadeira':'Aguarde a animação terminar.',disabled:seat.phase!=='seated'};
+      if(this.vehicleContact())return{kind:'vehicle',title:'Empilhadeira',label:'Entrar',hint:'E ou botão: entrar pelo lado mais próximo',disabled:false};
       if(this.workerContact())return{kind:'worker',title:'Trabalhador do galpão',label:'Conversar',hint:'E ou botão: aproximar-se da frente da mesa e conversar',disabled:false};
       if(this.nearbyChair())return{kind:'chair',title:'Cadeira de escritório',label:'Sentar',hint:'E para sentar nesta cadeira',disabled:false};
       const p=this.player;
@@ -249,8 +301,9 @@
       return seat.pathIndex>=seat.path.length;
     }
     usePhysical(){
-      if(this.paused||this.events.isBlocked?.()||this.tabletRead)return false;
+      if(this.paused||this.events.isBlocked?.()||(this.tabletRead&&this.vehicleSeat?.phase!=='driving'))return false;
       const action=this.physicalAction();if(!action||action.disabled)return false;
+      if(action.kind==='vehicle'){if(this.tabletRead){this.tabletRead.elapsed=4.1-.55*this.tabletRead.blend;this.tabletRead.screen=false;}return this.useVehicle();}
       if(action.kind==='worker'){
         const path=this.workerApproach();if(!path){this.events.onNotice?.('O caminho até a frente da mesa está bloqueado. Tente pelo outro lado.');return false;}
         this.workerTalk={phase:'approaching',path,pathIndex:0,moving:false,look:0};this.keys={};return true;
@@ -276,7 +329,8 @@
         const gate=this.shutter,p=this.player,layout=warehouse.layout;
         const next=gate.open+Math.sign(gate.target-gate.open)*Math.min(Math.abs(gate.target-gate.open),dt*.40);
         const occupied=Math.abs(p.x-layout.gateX)<.09+PLAYER_RADIUS+.16&&Math.abs(p.z)<layout.gateHalfWidth+PLAYER_RADIUS+.12;
-        const unsafe=next<gate.open&&occupied&&!warehouse.canPass(next);
+        const vehicleOccupied=this.forklift&&forkliftAPI.overlapsBox(this.forklift,{x:layout.gateX,z:0,hx:.15,hz:layout.gateHalfWidth});
+        const unsafe=next<gate.open&&((occupied&&!warehouse.canPass(next))||(vehicleOccupied&&next*layout.gateHeight<forkliftAPI.shape.height+.04));
         if(unsafe){if(!gate.blocked)this.events.onNotice?.('Passagem ocupada: fechamento pausado. Saia do vão para a porta fechar.');}
         else gate.open=next;
         gate.blocked=unsafe;
@@ -287,7 +341,7 @@
         const p=this.player;
         // An obstruction pauses a previously requested close; proximity never
         // starts an opening or closing operation or reverses the chosen target.
-        const unsafe=next<door.open&&Math.abs(p.x-.12)<.065+PLAYER_RADIUS+.10&&this.doorBoxes(next).some(b=>Math.abs(p.z-b.z)<b.hz+PLAYER_RADIUS+.16);
+        const unsafe=next<door.open&&((this.forklift&&this.doorBoxes(next).some(b=>forkliftAPI.overlapsBox(this.forklift,b)))||Math.abs(p.x-.12)<.065+PLAYER_RADIUS+.10&&this.doorBoxes(next).some(b=>Math.abs(p.z-b.z)<b.hz+PLAYER_RADIUS+.16));
         if(unsafe){if(!door.blocked)this.events.onNotice?.('Passagem ocupada: fechamento pausado.');}
         else door.open=next;
         door.blocked=unsafe;
@@ -328,6 +382,7 @@
         const layout=warehouse.layout;
         if(!warehouse.canPass(this.shutter?.open||0)&&Math.abs(x-layout.gateX)<.04+PLAYER_RADIUS&&Math.abs(z)<layout.gateHalfWidth+PLAYER_RADIUS)return false;
       }else if(x < -12.05||x>16.2||z < -7.08||z>7.04)return false;
+      if(forkliftAPI&&forkliftAPI.blocksPoint(this.forklift||forkliftAPI.initial,x,z,PLAYER_RADIUS))return false;
       const radiusSq=PLAYER_RADIUS*PLAYER_RADIUS;
       for(const box of this.doorBoxes()){
         if(Math.hypot(Math.max(Math.abs(x-box.x)-box.hx,0),Math.max(Math.abs(z-box.z)-box.hz,0))<PLAYER_RADIUS)return false;
@@ -386,8 +441,8 @@
       }
       return distanceSq<radius*radius;
     }
-    update(dt,realDt=dt){this.t+=dt;if(!this.paused)this.updateWorkerTalk(dt);if(!this.paused&&!this.events.isBlocked?.()){this.updateFurniture(dt);this.updateTablet(realDt);}let yaw=this.yaw;let speed=dt*3.6,dx=0,dz=0; if(this.keys.w||this.keys.arrowup){dx-=Math.sin(yaw);dz-=Math.cos(yaw)}if(this.keys.s||this.keys.arrowdown){dx+=Math.sin(yaw);dz+=Math.cos(yaw)}if(this.keys.a){dx-=Math.cos(yaw);dz+=Math.sin(yaw)}if(this.keys.d){dx+=Math.cos(yaw);dz-=Math.sin(yaw)}if(this.keys.arrowleft)this.yaw+=dt*1.65;if(this.keys.arrowright)this.yaw-=dt*1.65;
-      const moving=Math.hypot(dx,dz)>.01,controlAllowed=!this.paused&&!this.events.isBlocked?.()&&!this.seating&&!this.tabletRead&&!this.workerTalk;this.walking=!!(this.seating?.moving||this.workerTalk?.moving);
+    update(dt,realDt=dt){this.t+=dt;if(!this.paused)this.updateWorkerTalk(dt);if(!this.paused&&!this.events.isBlocked?.()){this.updateFurniture(dt);this.updateTablet(realDt);this.updateVehicle(dt);}let yaw=this.yaw;let speed=dt*3.6,dx=0,dz=0; if(this.keys.w||this.keys.arrowup){dx-=Math.sin(yaw);dz-=Math.cos(yaw)}if(this.keys.s||this.keys.arrowdown){dx+=Math.sin(yaw);dz+=Math.cos(yaw)}if(this.keys.a){dx-=Math.cos(yaw);dz+=Math.sin(yaw)}if(this.keys.d){dx+=Math.cos(yaw);dz-=Math.sin(yaw)}if(this.keys.arrowleft)this.yaw+=dt*1.65;if(this.keys.arrowright)this.yaw-=dt*1.65;
+      const moving=Math.hypot(dx,dz)>.01,controlAllowed=!this.paused&&!this.events.isBlocked?.()&&!this.seating&&!this.tabletRead&&!this.workerTalk&&!this.vehicleSeat;this.walking=!!(this.seating?.moving||this.workerTalk?.moving||this.vehicleSeat?.moving);
       if(moving&&controlAllowed){let n=Math.hypot(dx,dz);dx=dx/n*speed;dz=dz/n*speed;const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.12)),stepX=dx/steps,stepZ=dz/steps,startX=this.player.x,startZ=this.player.z;
         for(let i=0;i<steps;i++){if(this.canMove(this.player.x+stepX,this.player.z))this.player.x+=stepX;if(this.canMove(this.player.x,this.player.z+stepZ))this.player.z+=stepZ;}
         const movedX=this.player.x-startX,movedZ=this.player.z-startZ;

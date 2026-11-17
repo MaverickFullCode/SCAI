@@ -232,8 +232,8 @@
         return;
       }
       bool actor=m>=20., skin=m==21., hair=m==22., windowPane=m==14.;
-      if(m==15.){
-        if(world.x>16.75)discard;
+      if(m==15.||m==16.){
+        if(m==15.&&world.x>16.75)discard;
         float r2=dot(uv,uv);
         gl_FragColor=vec4(.12,.10,.13,color.x*pow(max(1.-r2,0.),2.));
         return;

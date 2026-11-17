@@ -184,8 +184,8 @@
   ];}
   function relevantSpots(){if(st.stage==='interview')return [{key:'interview',name:'Falar com o gestor',x:interviewTarget.x,z:interviewTarget.z,y:.05}];if(st.stage==='execution')return techs.map(t=>({key:t.id,name:t.place,x:t.pos[0],z:t.pos[1],y:.05}));return [];}
   function nearest(){let list=relevantSpots().map(h=>({...h,dist:engine?engine.distance(h.x,h.z):999})).sort((a,b)=>a.dist-b.dist);return list[0]||null;}
-  function interact(h){if(engine?.workerTalk||st.modal||st.dialogueOpen)return;if(engine?.tabletRead){note('Aguarde a consulta do tablet terminar.');return;}if(engine?.seating){note('Pressione E ou toque em Levantar antes de continuar a missão.');return;}if(!h)return;if(h.dist>2.85){note('Aproxime-se do local antes de interagir.');return;}if(h.key==='interview')interviewModal();else if(st.stage==='execution')procedureModal(h.key);}
-  function guide(){if(!engine)return;if(engine.workerTalk){note('Aguarde a conversa terminar.');return;}if(engine.tabletRead){note('Aguarde a consulta do tablet terminar.');return;}if(engine.seating){note('Levante-se da cadeira para localizar o próximo objetivo.');return;}if(st.stage==='welcome'){intro();return;}if(st.stage==='planning'){planModal();return;}if(st.stage==='report'){reportModal();return;}if(st.stage==='result'){resultModal();return;}
+  function interact(h){if(engine?.workerTalk||engine?.vehicleSeat||st.modal||st.dialogueOpen)return;if(engine?.tabletRead){note('Aguarde a consulta do tablet terminar.');return;}if(engine?.seating){note('Pressione E ou toque em Levantar antes de continuar a missão.');return;}if(!h)return;if(h.dist>2.85){note('Aproxime-se do local antes de interagir.');return;}if(h.key==='interview')interviewModal();else if(st.stage==='execution')procedureModal(h.key);}
+  function guide(){if(!engine)return;if(engine.vehicleSeat){note('Saia da empilhadeira com E para usar os objetivos.');return;}if(engine.workerTalk){note('Aguarde a conversa terminar.');return;}if(engine.tabletRead){note('Aguarde a consulta do tablet terminar.');return;}if(engine.seating){note('Levante-se da cadeira para localizar o próximo objetivo.');return;}if(st.stage==='welcome'){intro();return;}if(st.stage==='planning'){planModal();return;}if(st.stage==='report'){reportModal();return;}if(st.stage==='result'){resultModal();return;}
     let h;
     if(st.stage==='execution'){
       const remaining=st.budget-st.spent;
@@ -230,10 +230,10 @@
     let physical=blocked?null:engine.physicalAction?.();
     if(physical&&engine.seating?.phase==='aligning')physical={...physical,label:'Posicionando…',hint:'Aguarde o auditor se posicionar para sentar.',disabled:true};
     if(physical&&engine.seating?.phase==='leaving')physical={...physical,label:'Saindo…',hint:'Aguarde o auditor se afastar da cadeira.',disabled:true};
-    $('#actionBtn').disabled=!!(engine.seating||engine.tabletRead||engine.workerTalk);$('#reportBtn').disabled=!!(engine.seating||engine.tabletRead||engine.workerTalk);
-    $('#tabletBtn').disabled=blocked||!!engine.tabletRead||!!engine.workerTalk||!!(engine.seating&&engine.seating.phase!=='seated');
-    if(physical&&engine.tabletRead)physical={...physical,disabled:true};
-    $('#action').classList.toggle('visible',!blocked&&!engine.seating&&!engine.workerTalk&&!!near&&near.dist<=2.85);
+    $('#actionBtn').disabled=!!(engine.seating||engine.tabletRead||engine.workerTalk||engine.vehicleSeat);$('#reportBtn').disabled=!!(engine.seating||engine.tabletRead||engine.workerTalk||engine.vehicleSeat);
+    $('#tabletBtn').disabled=blocked||!!engine.tabletRead||!!engine.workerTalk||!!(engine.vehicleSeat&&engine.vehicleSeat.phase!=='driving')||!!(engine.seating&&engine.seating.phase!=='seated');
+    if(physical&&engine.tabletRead&&engine.vehicleSeat?.phase!=='driving')physical={...physical,disabled:true};
+    $('#action').classList.toggle('visible',!blocked&&!engine.seating&&!engine.workerTalk&&!engine.vehicleSeat&&!!near&&near.dist<=2.85);
     if(near){$('#actionTitle').textContent=near.name;$('#actionSubtitle').textContent=st.stage==='interview'?'Pressione Q para conversar':'Q ou Interagir: abrir teste ou rever resultado';}
     $('#physicalAction').classList.toggle('visible',!!physical);
     if(physical){
@@ -241,6 +241,7 @@
       $('#physicalBtn').textContent=physical.label;$('#physicalBtn').disabled=!!physical.disabled;
       $('#physicalBtn').setAttribute('aria-label',`${physical.label}: ${physical.title}`);
     }
+    const help=$('#controlHelp');if(!help.dataset.footText)help.dataset.footText=help.innerHTML;const mode=engine.vehicleSeat?'vehicle':'foot';if(help.dataset.mode!==mode){help.dataset.mode=mode;help.innerHTML=mode==='vehicle'?'W / S: frente e ré · A / D: virar · setas curvas: câmera · F: tablet · E: sair':help.dataset.footText;}
     $('#location').textContent=engine.player.x>16.75?'● Galpão de expansão':engine.player.x>0?'● Centro de distribuição':'● Escritório de auditoria';}
   let refreshTimer=0;
   function bindTouchControls() {

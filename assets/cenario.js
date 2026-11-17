@@ -258,50 +258,6 @@
       S([fx,3.011,fz+front*.021],[front*.423,0,0],[0,.423/sy,0],['aisleA','aisleB','aisleC'][index%3]);
       });
     }
-    function forklift(x,z) {
-      mesh.object('forklift',()=>{
-      const point=(a,b,c)=>[x+a,b,z+c],bx=(a,b,c,w,h,d,co,rad=.035)=>R(...point(a,b,c),w,h,d,co,rad);
-      surface(x+.2,z,-.042,1.43,.63,p.concrete,.29);
-      for(const [xx,r] of [[-.72,.307],[.60,.363]])for(const f of [-1,1]){
-        const cy=(r-.044)/sy,q=(v)=>point(xx,cy,f*v);
-        T(q(.395),q(.558),r,p.black,22);T(q(.558),q(.562),r*.70,p.graphite,20);
-        T(q(.563),q(.573),r*.52,p.chrome,20);T(q(.574),q(.586),r*.21,p.steel,12);
-        for(let i=0;i<5;i++){const a=i*TAU/5,px=xx+Math.cos(a)*r*.34,py=cy+Math.sin(a)*r*.34/sy;
-          T(point(px,py,f*.574),point(px,py,f*.581),.014,p.graphite,6);}
-      }
-      bx(-.105,.372,0,1.96,.35,.90,p.graphite,.072);
-      bx(-.685,.594,0,.851,.63,1.015,p.amber,.13);
-      bx(-.662,.884,0,.757,.104,.91,p.graphite,.045);
-      bx(-.082,.506,0,.428,.212,1.007,p.amber,.046);
-      bx(.49,.465,0,.764,.178,.948,p.amber,.046);
-      for(const f of [-1,1]){
-        bx(.62,.574,f*.427,.57,.105,.128,p.amber,.045);
-        bx(-.73,.585,f*.51,.386,.099,.009,p.graphite,.004);
-        for(let i=0;i<3;i++)bx(-.852+i*.086,.614,f*.517,.041,.011,.008,p.chrome,.003);
-        T(point(-.765,.893,f*.405),point(-.66,1.913,f*.405),.034,p.graphite,9);
-        T(point(.56,.55,f*.405),point(.399,1.913,f*.405),.037,p.graphite,9);
-        bx(-.083,1.948,f*.43,1.314,.09,.072,p.graphite,.022);
-        bx(.391,1.916,f*.328,.108,.106,.129,p.steel,.022);
-        bx(.45,1.916,f*.328,.013,.073,.092,p.lamp,.004);
-      }
-      bx(-.086,1.972,0,1.41,.09,.977,p.amber,.042);
-      for(let i=0;i<4;i++)bx(-.55+i*.265,1.918,0,.061,.039,.85,p.graphite,.01);
-      cyl(x-.56,2.068,z+.27,.063,.126,p.orange,12);cyl(x-.56,2.012,z+.27,.07,.032,p.ink,12);
-      bx(-.245,.891,0,.48,.163,.511,p.graphite,.067);bx(-.463,1.042,0,.106,.368,.492,p.leather,.045);
-      T(point(.42,.624,0),point(.241,1.032,0),.039,p.steel,10);
-      let prev=null;for(let i=0;i<=16;i++){const a=TAU*i/16,q=point(.239+.073*Math.cos(a),1.039+.051*Math.cos(a),.136*Math.sin(a));
-        if(prev)T(prev,q,.016,p.graphite,7);if(i%4===0)T(point(.239,1.039,0),q,.01,p.graphite,6);prev=q;}
-      for(let k=0;k<2;k++){const dx=.19+k*.105;T(point(dx,.594,.292),point(dx-.03,.849,.292),.014,p.chrome,7);sph(x+dx-.03,.855,z+.292,.027,.038,.027,p.black,8,4);}
-      for(const f of [-1,1]){
-        bx(.913,1.139,f*.315,.114,2.28,.101,p.graphite,.013);
-        bx(.989,1.194,f*.315,.032,2.12,.048,p.chrome,.011);
-        bx(1.058,.522,f*.241,.075,.799,.102,p.steel,.01);
-        bx(1.518,.143,f*.241,.974,.067,.111,p.steel,.012);
-      }
-      for(const y of [.25,.706,2.19])bx(.909,y,0,.105,.086,.717,p.graphite,.01);
-      T(point(.954,.295,0),point(.954,1.37,0),.043,p.chrome,10);
-      });
-    }
 
     // Architecture — shell and finished floor at the original marker elevations.
     B(-6.4,-.121,0,12.8,.232,15.60,p.floor);B(8.4,-.165,0,16.8,.24,15.60,p.concrete);
@@ -450,7 +406,6 @@
       carton(x,.145,-1.4,.81,.598+(i%2)*.092,.699,[2,1,0][i]);
       });
     }
-    forklift(12.19,-1.35);
     sy=1.52;
     // Inspection work bench and supplier kiosk inside their existing collision volumes.
     surface(5.65,2.05,-.042,1.0,.495,p.concrete,.18);

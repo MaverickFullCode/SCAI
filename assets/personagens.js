@@ -607,20 +607,22 @@
   const restThighAngle = Math.atan2(.017,hipHeight-kneeHeight);
   const restShinAngle = Math.atan2(-.020,kneeHeight-ankleHeight);
 
-  function pose(x,z,time=0,walking=false,role='auditor',dir=0,mouth=false,walkDistance,blinkClock=time,seatBlend=0,tabletBlend=0,workerLook=0){
+  function pose(x,z,time=0,walking=false,role='auditor',dir=0,mouth=false,walkDistance,blinkClock=time,seatBlend=0,tabletBlend=0,workerLook=0,driving=null){
     const roleOffset=role==='manager'?1.3:role==='worker'?2.7:0,t=time+roleOffset;
     // The cushion top is .935 scene units. A .375 drop puts the lowest
     // posterior trouser vertices on that surface, rather than inside the seat.
-    const seated=clamp(seatBlend),seatDrop=.375*seated;
+    const drive=role==='auditor'?driving:null;
+    const seated=clamp(seatBlend),seatDrop=.375*seated,seatRise=.349*(drive?.blend||0)+(drive?.stepLift||0);
     const reading=role==='auditor'?clamp(tabletBlend):0;
     const working=role==='worker'?seated:0;
     const w=walking&&!seated&&!reading?1:0, breath=sin(t*1.65), answer=mouth?1:0;
     const cycle=(walkDistance ?? time*3.6)/strideDistance;
     const phase=cycle*TAU;
-    const root=transform(x,seatDrop?-seatDrop:0,z,0,dir),rig={};
+    const rootHeight=drive?.rootY??seatRise-seatDrop;
+    const root=transform(x,rootHeight,z,0,dir),rig={};
     rig.body=joint(multiply(root,transform(0,.003*breath,0)),[0,1.66,0],0,-sin(phase)*.055*w,cos(phase)*.013*w);
-    const bodyTilt=.10*sin(Math.PI*seated)-.36*working;
-    if(seated)rig.body=joint(rig.body,[0,hipHeight,.007],bodyTilt);
+    const bodyTilt=drive?.feet?drive.lean:.10*sin(Math.PI*seated)-.36*working;
+    if(seated||drive?.feet)rig.body=joint(rig.body,[0,hipHeight,.007],bodyTilt);
     const look=role==='worker'?clamp(workerLook)*seated:0;
     rig.head=joint(rig.body,[0,2.58,0],lerp(lerp(lerp(-.013*breath+.018*sin(t*5)*answer,-.56,working),-.42522,reading),.62,look),lerp(lerp(lerp(.029*sin(t*.66)+.033*sin(t*2.5)*answer,-.08,working),.86646,reading),0,look),.006*sin(t*.94)*(1-reading)*(1-working));
     const vis=answer*(.4+.33*sin(t*19)+.20*sin(t*29+1)+.07*sin(t*42)),op=Math.max(0,vis);
@@ -667,7 +669,7 @@
           [.012,-.277],[.012,.143],[.020,-.293],
           [.020,.151],[.045,-.294],[.045,.152]
         ].map(([y,z])=>cos(footRoll)*(y-ankleHeight)-sin(footRoll)*(z-.010)));
-        const targetY=seated?ankleHeight:-footBottom+.009+lift;
+        const targetY=seated?ankleHeight+.39*(drive?.blend||0):-footBottom+.009+lift;
         const deltaY=targetY+seatDrop-hipHeight;
         const deltaZ=footZ+.010-.007;
         const distanceSquared=deltaY*deltaY+deltaZ*deltaZ;
@@ -703,7 +705,7 @@
       // naturally over the lap; hand, fingers and tablet share the same rig.
       let armAngle=-.017-w*swing*(carry?.19:.39)+.07*gesture+.04*seated;
       let foreAngle=(carry?.30:.08)+(carry?.05:.78)*seated+w*(.12+.10*Math.max(0,-swing))+.35*gesture+s*.018*breath;
-      const tableHand=seated>0&&((role==='auditor'&&s<0)||role==='worker');
+      const tableHand=!drive&&seated>0&&((role==='auditor'&&s<0)||role==='worker');
       if(tableHand){
         // Shoulder and elbow carry the wrist towards the table before the hand
         // pronates. The skin stays attached through the forearm/wrist blend.
@@ -725,6 +727,7 @@
           foreAngle=lerp(foreAngle,.415,seated);
         }
       }
+      if(carry&&drive?.feet){const crouch=clamp(-drive.lean/.32);armAngle=lerp(armAngle,.20,crouch);foreAngle=lerp(foreAngle,.95,crouch);}
       if(carry&&reading){armAngle=lerp(armAngle,.25,reading);foreAngle=lerp(foreAngle,2.0,reading);}
       const armRoll=-s*(.015+.019*gesture+(carry?.27:.04)*seated)*(1-working);
       rig['arm'+side]=joint(rig.body,[s*.356,2.411,.016],armAngle,.007*breath*(1-working),carry?lerp(armRoll,.30,reading):armRoll);
@@ -741,6 +744,39 @@
         if(reading)rig['hand'+side]=joint(rig['fore'+side],[s*.456,1.595,-.055],.52313*reading,.58715*reading,.34955*reading);
         rig.tablet=rig['hand'+side];
       }
+    }
+    if(drive?.feetBlend){
+      // Each foot has its own support: ground, side step, then the cabin floor.
+      // Solve both legs in 3D so the planted foot stays put during the climb.
+      const align=(from,to)=>{const u=unit(from),v=unit(to),n=cross(u,v),c=clamp(u.reduce((sum,x,i)=>sum+x*v[i],0),-1,1),len=Math.hypot(...n);if(len<1e-8)return identity();const [x,y,z]=unit(n),t=1-c;return new Float32Array([t*x*x+c,t*x*y+len*z,t*x*z-len*y,0,t*x*y-len*z,t*y*y+c,t*y*z+len*x,0,t*x*z+len*y,t*y*z-len*x,t*z*z+c,0,0,0,0,1]);};
+      const place=(r,a,b)=>{for(let i=0;i<3;i++)r[i+12]=b[i]-r[i]*a[0]-r[i+4]*a[1]-r[i+8]*a[2];return r;};
+      for(const f of drive.feet){
+        const s=f.side,side=s<0?'L':'R',S=[s*.151,hipHeight,.007],E=[s*.165,kneeHeight,-.010],W=[s*.166,ankleHeight,.010];
+        const target=[f.z-drive.offsetZ,f.y+.183-rootHeight,-(f.x+.245)],delta=sub(target,S),axis=unit(delta),l1=Math.hypot(...sub(E,S)),l2=Math.hypot(...sub(W,E)),d=clamp(Math.hypot(...delta),.03,l1+l2-.00001);
+        const a=(l1*l1-l2*l2+d*d)/(2*d),h=Math.sqrt(Math.max(0,l1*l1-a*a)),pole=[s*.10,0,-1],dot=pole.reduce((v,x,i)=>v+x*axis[i],0),bend=unit(pole.map((x,i)=>x-dot*axis[i]));
+        const knee=S.map((v,i)=>v+axis[i]*a+bend[i]*h);
+        const thigh=multiply(root,place(align(sub(E,S),sub(knee,S)),S,S)),shin=multiply(root,place(align(sub(W,E),sub(target,knee)),E,knee)),foot=multiply(root,place(identity(),W,target));
+        for(const [bone,matrix] of [['thigh'+side,thigh],['shin'+side,shin],['foot'+side,foot]])rig[bone]=new Float32Array(Array.from(rig[bone],(v,i)=>lerp(v,matrix[i],drive.feetBlend)));
+      }
+    }
+    if(drive?.grip){
+      // Two-bone IK keeps the free hand on the same rotating rim as the wheel.
+      const steering=drive.steer*1.65,phi=-Math.PI/2+steering;
+      const radial=[.15*sin(phi),.1160936*cos(phi),-.09498567*cos(phi)],Y=unit(radial),X=[0,.6332378,.7739573],Z=unit(cross(X,Y));
+      const grip=[radial[0]-drive.offsetZ,1.9+radial[1]-rootHeight-.003*breath,-.484+radial[2]];
+      const S=[-.356,2.411,.016],E=[-.429,2.011,.005],W=[-.456,1.595,-.055],target=grip.map((v,i)=>v+Y[i]*.075);
+      const d=sub(target,S),distance=Math.hypot(...d),axis=unit(d),l1=Math.hypot(...sub(E,S)),l2=Math.hypot(...sub(W,E)),reach=clamp(distance,.03,l1+l2-.0001);
+      const a=(l1*l1-l2*l2+reach*reach)/(2*reach),h=Math.sqrt(Math.max(0,l1*l1-a*a)),pole=[-1,-.2,.1],dot=pole.reduce((v,x,i)=>v+x*axis[i],0),bend=unit(pole.map((x,i)=>x-dot*axis[i]));
+      const elbow=S.map((v,i)=>v+axis[i]*a+bend[i]*h);
+      const align=(from,to)=>{
+        const u=unit(from),v=unit(to),n=cross(u,v),c=clamp(u.reduce((sum,x,i)=>sum+x*v[i],0),-1,1),len=Math.hypot(...n);if(len<1e-8)return identity();
+        const [x,y,z]=unit(n),t=1-c;
+        return new Float32Array([t*x*x+c,t*x*y+len*z,t*x*z-len*y,0,t*x*y-len*z,t*y*y+c,t*y*z+len*x,0,t*x*z+len*y,t*y*z-len*x,t*z*z+c,0,0,0,0,1]);
+      };
+      const place=(r,origin,destination)=>{for(let i=0;i<3;i++)r[i+12]=destination[i]-r[i]*origin[0]-r[i+4]*origin[1]-r[i+8]*origin[2];return r;};
+      const arm=place(align(sub(E,S),sub(elbow,S)),S,S),fore=place(align(sub(W,E),sub(target,elbow)),E,elbow);
+      const hand=place(new Float32Array([...X,0,...Y,0,...Z,0,0,0,0,1]),W,target);
+      for(const [bone,matrix] of [['armL',arm],['foreL',fore],['handL',hand]]){const goal=multiply(rig.body,matrix);rig[bone]=new Float32Array(Array.from(rig[bone],(value,i)=>lerp(value,goal[i],drive.grip)));}
     }
     return rig;
   }
