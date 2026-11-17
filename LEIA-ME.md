@@ -1,4 +1,4 @@
-# SCAI • Versão Alfa 0.4.2
+# SCAI • Versão Alfa 0.5.1
 
 Leia também [MEMORIA-DO-PROJETO.md](MEMORIA-DO-PROJETO.md) para o registro permanente da conversa de origem, metodologia e decisões visuais.
 
@@ -22,9 +22,9 @@ Veja [os personagens da Versão Alfa 0.2](docs/personagens-realistas.md), aprova
 
 ## Controles
 
-Na Versão Alfa 0.4.2, **Q** aciona as conversas e procedimentos da missão. **E** usa cadeiras e a porta dupla entre o escritório e o galpão. Os botões de ação também funcionam por toque. Ao sentar, o auditor fica ancorado à cadeira; pressione E novamente para levantar. A câmera continua livre. Veja [cadeiras e porta de vidro](docs/cadeiras-e-porta.md) para os controles, capturas e validação.
+Na Versão Alfa 0.5.1, **Q** aciona as conversas e procedimentos da missão. **E** usa cadeiras, portas, a conversa com o trabalhador e a empilhadeira. Os botões de ação também funcionam por toque. Ao sentar, o auditor fica ancorado à cadeira; pressione E novamente para levantar. A câmera continua livre. Veja [cadeiras e porta de vidro](docs/cadeiras-e-porta.md) para os controles, capturas e validação.
 
-O funcionário do galpão fica sentado atrás da mesa, em pose de trabalho, sem diálogo ou interação. Sua cadeira permanece ocupada; as oito cadeiras do escritório continuam disponíveis para o jogador.
+O funcionário do galpão fica sentado atrás da mesa. Ao encostar nele ou na bancada, use **E / Conversar**: o auditor caminha até a frente, o trabalhador vira só a cabeça e fala com legenda a 30 caracteres por segundo. Ao terminar, use **Encerrar conversa** ou E para ele voltar ao documento. A conversa não altera créditos nem objetivos. Sua cadeira permanece ocupada; as oito cadeiras do escritório continuam disponíveis para o jogador.
 
 As janelas receberam o mesmo vidro da porta e o panorama envolve o prédio em uma cobertura externa afastada, criando profundidade em relação aos caixilhos e preenchendo as vistas laterais e para baixo. Veja a [prévia e validação das janelas](docs/janelas-de-vidro.md).
 
@@ -67,3 +67,23 @@ Versão Alfa 0.4.2 registrada em `codex/teste-nova-implementacao`, integrada à 
 Validação da revisão: `node --test tests/textos-plano.test.cjs tests/interacoes.test.cjs tests/camera.test.cjs` e `python tests/textos-plano-runtime.py`. O fluxo de navegador cobre computador, celular e tablet emulados, execução fora do plano, consulta gratuita, saldo insuficiente, aprovação e revisão.
 
 Referência para as distinções entre relatórios: [NBC TA 700/705, CFC](https://cfc.org.br/wp-content/uploads/2018/04/Publicacao_NBC_TA_AUDITORIA.pdf). As regras de créditos, pesos e conclusão são escolhas didáticas deste jogo.
+
+## Galpão de expansão e porta de enrolar · Alfa 0.5
+
+Na ramificação `codex/teste-nova-implementacao`, o painel ao lado da porta metálica oferece **E / Abrir porta / Fechar porta**. Há um painel equivalente do outro lado; os dois comandam a mesma porta. As lâminas sobem e recolhem na caixa superior. Aproximar-se não aciona a porta, e um fechamento solicitado pausa se alguém estiver no vão.
+
+Atrás da porta há um galpão fechado, com piso de concreto igual ao existente, cerca de **80 × 55 unidades** e altura de 10,8 unidades. Piso livre de cargas e móveis, estrutura no perímetro e sob o teto, preparado como espaço para futuras implementações. A empilhadeira pode ser dirigida por E / Entrar: W/S para frente e ré, A/D para virar e E / Sair para estacionar e desembarcar. No celular, use as setas de movimento e o botão de ação. Veja [a prévia e os controles](docs/galpao-expansao.md). Recurso integrado à main na Versão Alfa 0.5.1.
+
+Conversa do trabalhador validada com trajetos de frente/lados/costas, corpo e braços preservados durante a fala, retorno suave da cabeça e interface em computador/celular emulados. Prévia em [conversa do trabalhador](docs/previa-conversa-trabalhador.jpg).
+
+## Empilhadeira dirigível · Alfa 0.5.1
+
+Encoste no veículo e use **E / Entrar**. O auditor caminha até a lateral mais próxima que esteja livre, sobe e senta. A mão esquerda acompanha o aro do volante; a direita mantém o tablet. **W/↑** acelera para frente, **S/↓** dá ré, **A/D** vira a direção. As setas curvas continuam girando a câmera. Soltar o acelerador freia; seguir reto centraliza o volante. **E / Sair** para o veículo e procura uma lateral livre para desembarcar.
+
+Rodas e pneus giram pela distância real de cada roda, com velocidades diferentes nas curvas e sentido invertido na ré. Colisões impedem avanço e giro de pneus quando bloqueado. O veículo fica parado na posição e orientação em que foi deixado; seu local original fica livre. Não há operação dos garfos nem transporte de cargas nesta implementação. A cabine foi ajustada ao tamanho do auditor. [Prévia](docs/previa-empilhadeira-dirigivel.jpg).
+
+Implementação registrada na ramificação `codex/teste-nova-implementacao` como Versão Alfa 0.5.1 e integrada à main.
+
+### Revisão do embarque e do tablet
+
+A subida usa apoios independentes: um pé no degrau lateral, o outro no piso da cabine e depois os dois pés dentro antes de sentar, com o corpo abaixado para passar sob o teto. O desembarque inverte a sequência. **F** e o botão F também funcionam enquanto dirige, mantendo a mão esquerda no volante e os comandos do veículo ativos. A velocidade máxima passou de 5 para 10 unidades/s à frente e de 2,6 para 5,2 unidades/s na ré; aceleração e freio acompanham o aumento. [Embarque](docs/previa-embarque-empilhadeira.jpg) · [Tablet durante a direção](docs/previa-tablet-dirigindo.jpg).

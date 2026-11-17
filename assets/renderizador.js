@@ -30,6 +30,8 @@
         const door=SCAIDoor.build();
         this.door={fixed:this.buffer(door.fixed.v,12),frameParts:door.frameParts,leaves:door.leaves.map(leaf=>({id:leaf.id,side:leaf.side,bounds:leaf.bounds,opaque:this.buffer(leaf.opaque.v,12),glass:this.buffer(leaf.glass.v,12)}))};
       }
+      this.shutter=window.SCAIWarehouse?this.buffer(SCAIWarehouse.buildSlat().v,12):null;
+      if(window.SCAIForklift){const model=SCAIForklift.build();this.forkliftModel={body:this.buffer(model.body.v,12),tires:model.tires.map(m=>this.buffer(m.v,12)),helm:this.buffer(model.helm.v,12),shadow:this.buffer(model.shadow.v,12)};}
       this.actors={};
       const workerChair=window.SCAI3D.chairs.find(chair=>chair.occupant==='worker');
       this.workerPosition={x:workerChair.x,z:workerChair.z+workerChair.facing*.035,dir:workerChair.dir};
@@ -198,9 +200,9 @@
       if(engine.cameraOverlaps(bounds,this.hiddenActors.has(role)?.06:0)){this.hiddenActors.add(role);return false;}
       this.hiddenActors.delete(role);return true;
     }
-    drawPerson(x,z,time,walking,role,dir,mouth,walkDistance,blinkClock=time,seatBlend=0,tabletRead=null){
+    drawPerson(x,z,time,walking,role,dir,mouth,walkDistance,blinkClock=time,seatBlend=0,tabletRead=null,headLook=0,driving=null){
       const gl=this.gl, actor=this.actors[role];
-      const pose=SCAIPeople.pose(x,z,time,walking,role,dir,mouth,walkDistance,blinkClock,seatBlend,tabletRead?.blend||0);
+      const pose=SCAIPeople.pose(x,z,time,walking,role,dir,mouth,walkDistance,blinkClock,seatBlend,tabletRead?.blend||0,headLook,driving);
       gl.uniform1f(this.uniform.TabletTime,role==='auditor'&&tabletRead?.screen?tabletRead.elapsed-.55:-1);
       for(let i=0;i<actor.bones.length;i++)this.boneMatrices.set(pose[actor.bones[i]],i*16);
       gl.uniformMatrix4fv(this.uniform['Bones[0]'],false,this.boneMatrices);
@@ -264,6 +266,33 @@
       gl.depthMask(true);gl.disable(gl.BLEND);gl.uniformMatrix4fv(this.uniform.Model,false,identity);
       gl.uniform1f(this.uniform.Opacity,1);gl.uniform1i(this.uniform.Actor,1);
     }
+    drawShutter(engine){
+      if(!this.shutter)return;
+      const {layout,slatPositions}=window.SCAIWarehouse,open=engine.shutter?.open||0,gl=this.gl;
+      const bottom=layout.floor+open*layout.gateHeight;
+      const bounds={min:[layout.gateX-.05,bottom,-layout.gateHalfWidth],max:[layout.gateX+.05,layout.floor+layout.gateHeight,layout.gateHalfWidth]};
+      this.shutterHidden=open<1&&engine.cameraOverlaps(bounds,this.shutterHidden?.06:0);
+      if(this.shutterHidden)return;
+      const pitch=layout.gateHeight/layout.slats+.006;
+      for(const slat of slatPositions(open)){
+        const model=new Float32Array(identity);model[5]=slat.height/pitch;model[13]=slat.y;
+        gl.uniformMatrix4fv(this.uniform.Model,false,model);this.drawGeometry(this.shutter);
+      }
+      gl.uniformMatrix4fv(this.uniform.Model,false,identity);
+    }
+    drawForklift(engine){
+      const v=engine.forklift,model=this.forkliftModel;if(!v||!model)return;
+      const api=window.SCAIForklift,gl=this.gl,points=api.corners(v),bounds={min:[Math.min(...points.map(p=>p.x)),-.045,Math.min(...points.map(p=>p.z))],max:[Math.max(...points.map(p=>p.x)),api.shape.height,Math.max(...points.map(p=>p.z))]};
+      this.forkliftHidden=engine.cameraOverlaps(bounds,this.forkliftHidden?.06:0);if(this.forkliftHidden)return;
+      const base=api.matrix(v),translate=(x,y,z)=>{const m=new Float32Array(identity);m[12]=x;m[13]=y;m[14]=z;return m;};
+      gl.uniformMatrix4fv(this.uniform.Model,false,base);
+      gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);gl.depthMask(false);this.drawGeometry(model.shadow);gl.depthMask(true);gl.disable(gl.BLEND);
+      this.drawGeometry(model.body);
+      for(let i=0;i<4;i++){const w=api.wheels[i],steer=api.matrix({x:0,z:0,angle:api.wheelSteer(v,i)}),spin=api.rotation([0,0,1],v.wheelAngles[i]);
+        const m=api.multiply(base,api.multiply(translate(w.x,w.r-.044,w.z),api.multiply(steer,spin)));gl.uniformMatrix4fv(this.uniform.Model,false,m);this.drawGeometry(model.tires[i]);}
+      const helm=api.multiply(base,api.multiply(translate(.239,1.9,0),api.rotation([.7739573,-.6332378,0],v.steer*1.65)));
+      gl.uniformMatrix4fv(this.uniform.Model,false,helm);this.drawGeometry(model.helm);gl.uniformMatrix4fv(this.uniform.Model,false,identity);
+    }
     draw(engine) {
       const gl=this.gl, p=engine.player,worker=this.workerPosition, focus=engine.events.isDialogueOpen?.(),blinkClock=performance.now()/1000;
       gl.viewport(0,0,gl.drawingBufferWidth,gl.drawingBufferHeight);
@@ -277,14 +306,16 @@
       this.updateDoorVisibility(engine);
       this.drawWorld(engine);
       this.drawDoor(engine);
+      this.drawShutter(engine);
       this.drawGeometry(this.markers);
       gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA); gl.depthMask(false);
       this.drawGeometry(this.contacts);
       gl.depthMask(true); gl.disable(gl.BLEND);
+      this.drawForklift(engine);
       gl.uniform1i(this.uniform.Actor,1);
-      if(!focus&&!engine.hidePlayer)this.drawPerson(p.x,p.z,engine.t,engine.walking,'auditor',p.dir,false,engine.walkDistance,blinkClock,engine.seating?.blend||0,engine.tabletRead);
+      if(!focus&&!engine.hidePlayer)this.drawPerson(p.x,p.z,engine.t,engine.walking,'auditor',p.dir,false,engine.walkDistance,blinkClock,engine.vehicleSeat?.blend||engine.seating?.blend||0,engine.tabletRead,0,engine.vehicleSeat?{...engine.vehicleSeat,steer:engine.forklift.steer}:null);
       if(this.personVisible(engine,-10.7,-5.2,'manager',Math.PI))this.drawPerson(-10.7,-5.2,engine.t,false,'manager',Math.PI,!!engine.events.isTalking?.(),undefined,blinkClock);
-      if(!focus&&this.personVisible(engine,worker.x,worker.z,'worker',worker.dir,true))this.drawPerson(worker.x,worker.z,engine.t,false,'worker',worker.dir,false,undefined,blinkClock,1);
+      if((!focus||engine.workerTalk)&&this.personVisible(engine,worker.x,worker.z,'worker',worker.dir,true))this.drawPerson(worker.x,worker.z,engine.t,false,'worker',worker.dir,!!engine.events.isWorkerTalking?.(),undefined,blinkClock,1,null,engine.workerTalk?.look||0);
       this.drawTransparent(engine);
     }
   }

@@ -5,7 +5,7 @@ const {readFileSync}=require('node:fs');
 const {join}=require('node:path');
 const {runInNewContext}=require('node:vm');
 const context={window:{SCAIGraphics:{uv:()=>[0,0,1,1]}}};
-for(const file of ['engine3d.js','assets/malha.js','assets/iluminacao.js','assets/cenario.js','assets/renderizador.js']){
+for(const file of ['assets/galpao.js','assets/empilhadeira.js','engine3d.js','assets/malha.js','assets/iluminacao.js','assets/cenario.js','assets/renderizador.js']){
   runInNewContext(readFileSync(join(__dirname,'..',file),'utf8'),context);
 }
 const {SCAI3D:{Engine},SCAIMesh:Mesh,SCAIWorld:World,SCAIRenderer:Renderer}=context.window;
@@ -77,7 +77,7 @@ test('objetos do cenário têm limites medidos e triângulos independentes das p
       }
     }
   }
-  for(const id of ['meeting-table','chair:-8.85:-1.92','desk:-4.3:3.8','rack:4.5:-5.75','forklift','inspection-bench','supplier-kiosk'])assert.ok(ids.has(id));
+  for(const id of ['meeting-table','chair:-8.85:-1.92','desk:-4.3:3.8','rack:4.5:-5.75','inspection-bench','supplier-kiosk'])assert.ok(ids.has(id));
 });
 
 test('estante atravessada fica invisível por inteiro e reaparece sem alterar o zoom',()=>{
@@ -94,7 +94,7 @@ test('estante atravessada fica invisível por inteiro e reaparece sem alterar o 
 
 test('mesa e cadeira somem apenas junto à câmera, conservando o restante do cenário',()=>{
   const e=engine(),r=renderer();
-  for(const id of ['meeting-table','chair:-8.85:-1.92','desk:-4.3:3.8','forklift','supplier-kiosk']){
+  for(const id of ['meeting-table','chair:-8.85:-1.92','desk:-4.3:3.8','supplier-kiosk']){
     const object=mesh.cameraObjects.find(o=>o.id===id);
     e.eye=object.min.map((v,i)=>(v+object.max[i])*.5);r.drawWorld(e);
     assert.ok(r.hiddenObjects.has(id),id);

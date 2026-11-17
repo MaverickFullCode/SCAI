@@ -99,8 +99,11 @@
       return base;
     }
     float visibility(vec3 n){
-      if(!uShadowReady)return 1.;
+      // This map contains furniture from the original rooms, behind the partition.
+      // The expansion has its own lighting; do not project those shadows across it.
+      if(!uShadowReady||world.x>16.75)return 1.;
       vec2 base=lightUV(world);
+      if(base.x<0.||base.x>1.||base.y<0.||base.y>1.)return 1.;
       float visible=0., bias=.032+.045*(1.-max(n.y,0.));
       float blocker=texture2D(uShadow,base).r*9.;
       float spread=mix(.0008,.0036,clamp((blocker-world.y)*.65,0.,1.));
@@ -229,7 +232,8 @@
         return;
       }
       bool actor=m>=20., skin=m==21., hair=m==22., windowPane=m==14.;
-      if(m==15.){
+      if(m==15.||m==16.){
+        if(m==15.&&world.x>16.75)discard;
         float r2=dot(uv,uv);
         gl_FragColor=vec4(.12,.10,.13,color.x*pow(max(1.-r2,0.),2.));
         return;
@@ -269,7 +273,7 @@
       float vis=visibility(n);
       float ao=1.;
       if(n.y>.5 && world.y<.11){
-        float floorEdges=min(min(world.x+12.72,16.75-world.x),7.63-abs(world.z));
+        float floorEdges=world.x>16.75?min(min(world.x-16.75,96.75-world.x),27.67-abs(world.z+20.)):min(min(world.x+12.72,16.75-world.x),7.63-abs(world.z));
         ao-=.18*exp(-max(floorEdges,0.)*2.6);
         ao-=.28*max(footprint(uPlayer),max(footprint(vec2(-10.7,-5.2)),footprint(uWorker)));
       }
