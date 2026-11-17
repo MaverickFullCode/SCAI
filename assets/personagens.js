@@ -607,7 +607,7 @@
   const restThighAngle = Math.atan2(.017,hipHeight-kneeHeight);
   const restShinAngle = Math.atan2(-.020,kneeHeight-ankleHeight);
 
-  function pose(x,z,time=0,walking=false,role='auditor',dir=0,mouth=false,walkDistance,blinkClock=time,seatBlend=0,tabletBlend=0){
+  function pose(x,z,time=0,walking=false,role='auditor',dir=0,mouth=false,walkDistance,blinkClock=time,seatBlend=0,tabletBlend=0,workerLook=0){
     const roleOffset=role==='manager'?1.3:role==='worker'?2.7:0,t=time+roleOffset;
     // The cushion top is .935 scene units. A .375 drop puts the lowest
     // posterior trouser vertices on that surface, rather than inside the seat.
@@ -621,7 +621,8 @@
     rig.body=joint(multiply(root,transform(0,.003*breath,0)),[0,1.66,0],0,-sin(phase)*.055*w,cos(phase)*.013*w);
     const bodyTilt=.10*sin(Math.PI*seated)-.36*working;
     if(seated)rig.body=joint(rig.body,[0,hipHeight,.007],bodyTilt);
-    rig.head=joint(rig.body,[0,2.58,0],lerp(lerp(-.013*breath+.018*sin(t*5)*answer,-.56,working),-.42522,reading),lerp(lerp(.029*sin(t*.66)+.033*sin(t*2.5)*answer,-.08,working),.86646,reading),.006*sin(t*.94)*(1-reading)*(1-working));
+    const look=role==='worker'?clamp(workerLook)*seated:0;
+    rig.head=joint(rig.body,[0,2.58,0],lerp(lerp(lerp(-.013*breath+.018*sin(t*5)*answer,-.56,working),-.42522,reading),.62,look),lerp(lerp(lerp(.029*sin(t*.66)+.033*sin(t*2.5)*answer,-.08,working),.86646,reading),0,look),.006*sin(t*.94)*(1-reading)*(1-working));
     const vis=answer*(.4+.33*sin(t*19)+.20*sin(t*29+1)+.07*sin(t*42)),op=Math.max(0,vis);
     rig.jaw=joint(rig.head,[0,headHeight(2.785,role),.028],-.088*op);
     const reveal=smooth(.025,.18,op),level=headHeight(mouthHeight,role);

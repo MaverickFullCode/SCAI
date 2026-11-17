@@ -1,4 +1,4 @@
-# SCAI • Versão Alfa 0.4.2
+# SCAI • Versão Alfa 0.5
 
 Leia também [MEMORIA-DO-PROJETO.md](MEMORIA-DO-PROJETO.md) para o registro permanente da conversa de origem, metodologia e decisões visuais.
 
@@ -22,9 +22,9 @@ Veja [os personagens da Versão Alfa 0.2](docs/personagens-realistas.md), aprova
 
 ## Controles
 
-Na Versão Alfa 0.4.2, **Q** aciona as conversas e procedimentos da missão. **E** usa cadeiras e a porta dupla entre o escritório e o galpão. Os botões de ação também funcionam por toque. Ao sentar, o auditor fica ancorado à cadeira; pressione E novamente para levantar. A câmera continua livre. Veja [cadeiras e porta de vidro](docs/cadeiras-e-porta.md) para os controles, capturas e validação.
+Na Versão Alfa 0.5, **Q** aciona as conversas e procedimentos da missão. **E** usa cadeiras, portas e a conversa com o trabalhador. Os botões de ação também funcionam por toque. Ao sentar, o auditor fica ancorado à cadeira; pressione E novamente para levantar. A câmera continua livre. Veja [cadeiras e porta de vidro](docs/cadeiras-e-porta.md) para os controles, capturas e validação.
 
-O funcionário do galpão fica sentado atrás da mesa, em pose de trabalho, sem diálogo ou interação. Sua cadeira permanece ocupada; as oito cadeiras do escritório continuam disponíveis para o jogador.
+O funcionário do galpão fica sentado atrás da mesa. Ao encostar nele ou na bancada, use **E / Conversar**: o auditor caminha até a frente, o trabalhador vira só a cabeça e fala com legenda a 30 caracteres por segundo. Ao terminar, use **Encerrar conversa** ou E para ele voltar ao documento. A conversa não altera créditos nem objetivos. Sua cadeira permanece ocupada; as oito cadeiras do escritório continuam disponíveis para o jogador.
 
 As janelas receberam o mesmo vidro da porta e o panorama envolve o prédio em uma cobertura externa afastada, criando profundidade em relação aos caixilhos e preenchendo as vistas laterais e para baixo. Veja a [prévia e validação das janelas](docs/janelas-de-vidro.md).
 
@@ -67,3 +67,11 @@ Versão Alfa 0.4.2 registrada em `codex/teste-nova-implementacao`, com integraç
 Validação da revisão: `node --test tests/textos-plano.test.cjs tests/interacoes.test.cjs tests/camera.test.cjs` e `python tests/textos-plano-runtime.py`. O fluxo de navegador cobre computador, celular e tablet emulados, execução fora do plano, consulta gratuita, saldo insuficiente, aprovação e revisão.
 
 Referência para as distinções entre relatórios: [NBC TA 700/705, CFC](https://cfc.org.br/wp-content/uploads/2018/04/Publicacao_NBC_TA_AUDITORIA.pdf). As regras de créditos, pesos e conclusão são escolhas didáticas deste jogo.
+
+## Galpão de expansão e porta de enrolar · Alfa 0.5
+
+Na ramificação `codex/teste-nova-implementacao`, o painel ao lado da porta metálica oferece **E / Abrir porta / Fechar porta**. Há um painel equivalente do outro lado; os dois comandam a mesma porta. As lâminas sobem e recolhem na caixa superior. Aproximar-se não aciona a porta, e um fechamento solicitado pausa se alguém estiver no vão.
+
+Atrás da porta há um galpão fechado, com piso de concreto igual ao existente, cerca de **80 × 55 unidades** e altura de 10,8 unidades. Piso livre de cargas e móveis, estrutura no perímetro e sob o teto, preparado como espaço para futuras implementações. O veículo atual continua estático. Veja [a prévia e os controles](docs/galpao-expansao.md). Recurso da Versão Alfa 0.5 na ramificação de desenvolvimento, sem integração à main.
+
+Conversa do trabalhador validada com trajetos de frente/lados/costas, corpo e braços preservados durante a fala, retorno suave da cabeça e interface em computador/celular emulados. Prévia em [conversa do trabalhador](docs/previa-conversa-trabalhador.jpg).

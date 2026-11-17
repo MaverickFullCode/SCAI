@@ -322,8 +322,7 @@
       B(8.4,.196,z-Math.sign(z)*.097,16.6,.402,.047,p.steel);}
     B(-12.72,.32,0,.17,.66,15.48,p.ivory);B(-12.72,5.26,0,.17,1.94,15.48,p.ivory);
     B(-12.72,2.47,-7.34,.17,3.64,.8,p.ivory);B(-12.72,2.47,7.19,.17,3.64,1.10,p.ivory);
-    B(16.75,3.11,0,.20,6.24,15.48,p.roof);
-    B(16.623,.197,0,.036,.408,15.29,p.steel);
+
 
     // Transparent panes sit inside real frame profiles; the city is far outside.
     windowPane('window:west',[-12.65,2.47,-.15],[0,0,-13.58],[0,3.64,0]);
@@ -345,11 +344,11 @@
     // A closed distant shell covers every view through the glazing, including
     // steep downward and grazing views. UVs preserve the skyline's height;
     // the shader continues sky/foliage beyond the source image without a rim.
-    const exteriorCenter=[2,0,-2],exteriorRadius=40,columns=96,rows=24;
+    const exteriorCenter=[2,0,-2],exteriorRadius=global.SCAIWarehouse?.layout.panoramaRadius||40,columns=96,rows=24;
     const exteriorPoint=(u,v)=>{
       const yaw=u*TAU,pitch=(v-.5)*Math.PI,y=exteriorRadius*Math.sin(pitch);
       const point=[2+exteriorRadius*Math.cos(pitch)*Math.cos(yaw),y,-2+exteriorRadius*Math.cos(pitch)*Math.sin(yaw)];
-      return {point,normal:point.map((n,i)=>(exteriorCenter[i]-n)/exteriorRadius),uv:[u*4,(22-y)/27]};
+      return {point,normal:point.map((n,i)=>(exteriorCenter[i]-n)/exteriorRadius),uv:[u*4,(22-y*40/exteriorRadius)/27]};
     };
     for(let row=0;row<rows;row++)for(let column=0;column<columns;column++){
       const corners=[[column,row],[column+1,row],[column+1,row+1],[column,row+1]].map(([u,v])=>exteriorPoint(u/columns,v/rows));
@@ -404,11 +403,11 @@
     sy=1;
     }
 
-    // Warehouse shell, signage, fixed dock door, numbered racking and painted floor.
+    // Warehouse shell, signage, rolling-door entrance, numbered racking and painted floor.
     for(const z of [-7.545,7.545]){
       for(let x=.65;x<16.72;x+=1.115)B(x,3.07,z,.014,6.04,.026,p.silver);
       for(const h of [.49,4.56])B(8.34,h,z-Math.sign(z)*.025,16.5,.065,.031,p.steel);
-      for(const x of [2.3,7.05,11.8,16.05]){
+      for(const x of [2.3,7.05,11.8,15.4]){
         const front=z-Math.sign(z)*.064;
         R(x,5.48,front,2.3,.72,.04,p.rail,.018);
         R(x,5.48,front-Math.sign(z)*.027,2.16,.60,.018,p.sky,.01);
@@ -420,10 +419,6 @@
     // An identifier on the entrance's high fascia can be seen when approaching from the office.
     B(-.104,5.66,0,.045,.94,2.61,p.deep);
     S([-.132,5.66,0],[0,0,2.42],[0,.896,0],'distribution');
-    R(16.602,1.82,.00,.075,3.72,3.43,p.steel,.029);
-    for(let k=0;k<13;k++)B(16.553,.185+k*.256,.00,.033,.238,3.18,k%2?p.roof:p.silver);
-    for(const z of [-1.67,1.67])B(16.514,1.849,z,.111,3.69,.111,p.deep);
-    R(16.488,3.695,0,.15,.215,3.49,p.blue,.03);
     for(const z of [-2.04,2.04]){
       R(16.47,.66,z,.25,1.35,.21,p.amber,.035);
       for(const h of [.21,.52,.83,1.14])B(16.325,h,z,.012,.123,.213,p.graphite);
@@ -434,11 +429,6 @@
         T([x,5.29,z],[x,5.08,z],.022,p.red,8);
         cyl(x,5.055,z,.062,.024,p.chrome,12);
       }
-    }
-    R(16.54,1.98,3.07,.13,.83,.56,p.ivoryMetal,.025);
-    B(16.461,1.99,3.07,.025,.61,.43,p.paper);
-    for(const h of [1.77,1.91,2.05]){
-      sph(16.439,h,3.14,.014,.038,.038,h<2?p.green:p.red,10,6);
     }
     for(const x of [1.78,7.05,11.82,16.12])for(const z of [-4.49,4.49])B(x,-.04,z,.053,.007,4.69,p.yellow);
     for(const z of [-2.82,2.82])B(8.94,-.04,z,14.41,.008,.057,p.yellow);
@@ -509,8 +499,9 @@
     for(const x of [-10.13,-7.57])T([x,4.91,-3.25],[x,6.096,-3.25],.012,p.graphite,7);
     R(-8.85,4.85,-3.25,3.22,.135,.259,p.rail,.04);
     R(-8.85,4.778,-3.25,3.091,.015,.188,p.lamp,.005);
+    const drawHallControls=global.SCAIWarehouse?.build(mesh);
     mesh.beginProps();
-    furnishOffice();furnishWarehouse();
+    furnishOffice();furnishWarehouse();drawHallControls?.();
     mesh.windows=windows;
     return mesh;
   }

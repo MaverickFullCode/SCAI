@@ -19,12 +19,17 @@
     {x:-8.8,z:4.9,facing:-1},{x:-4.3,z:4.9,facing:-1},
     {x:5.65,z:3.15,facing:-1,occupant:'worker'}
   ].map((chair,index)=>({...chair,id:'chair-'+index,dir:chair.facing>0?Math.PI:0}));
+  const WORKER_DESK={x:5.65,z:2.05,hx:1,hz:.48,top:1.58};
+  const WORKER=CHAIRS.find(chair=>chair.occupant==='worker');
   const ease=value=>{const t=Math.max(0,Math.min(1,value));return t*t*(3-2*t);};
   const turn=(from,to,t)=>from+Math.atan2(Math.sin(to-from),Math.cos(to-from))*t;
+  const warehouse=global.SCAIWarehouse;
   const WALL_BOXES=[
+    ...(warehouse?.walls||[]),
     {x:0,z:-5.15,hx:.085,hz:2.55,top:5.42},{x:0,z:5.15,hx:.085,hz:2.55,top:5.42}
   ];
-  const CAMERA_ROOM={min:[-12.54,.12,-7.43],max:[16.61,6.02,7.49]};
+  const CAMERA_WALLS=[...WALL_BOXES,...(warehouse?.cameraWalls.slice(warehouse.walls.length)||[])];
+  const CAMERA_ROOM=warehouse?.layout.cameraRoom||{min:[-12.54,.12,-7.43],max:[16.61,6.02,7.49]};
   const WALK_BOXES=[
     ...WALL_BOXES,
     {x:-8.85,z:-3.25,hx:2.225,hz:.86,top:1.40},
@@ -37,7 +42,7 @@
     ...[4.5,9.3,14.1].flatMap(x=>[-5.75,5.75].map(z=>({x,z,hx:1.55,hz:.68,top:5.25}))),
     {x:5.1,z:-1.4,hx:1.55,hz:.425,top:1.16},
     {x:12.615,z:-1.35,hx:1.64,hz:.57,top:3.12},
-    {x:5.65,z:2.05,hx:1,hz:.48,top:1.58},
+    WORKER_DESK,
     {x:5.65,z:3.15,hx:.325,hz:.37,top:1.97},
     {x:15,z:1.4,hx:.38,hz:.31,top:2.45}
   ];
@@ -80,8 +85,10 @@
       this.cameraPadding = .22;
       this.hidePlayer = false;
       this.door = {open:0,target:0};
+      this.shutter = {open:0,target:0,blocked:false};
       this.seating = null;
       this.tabletRead = null;
+      this.workerTalk = null;
       this.bind();this.resize();this.loop=this.loop.bind(this);requestAnimationFrame(this.loop);
     }
     bind() {
@@ -137,7 +144,7 @@
     setEco(val){this.low=!!val;this.resize()}
     setInput(key,val){this.keys[key]=val}
     consultTablet(){
-      if(this.paused||this.events.isBlocked?.()||this.tabletRead||(this.seating&&this.seating.phase!=='seated'))return false;
+      if(this.paused||this.events.isBlocked?.()||this.tabletRead||this.workerTalk||(this.seating&&this.seating.phase!=='seated'))return false;
       this.tabletRead={elapsed:0,blend:0,screen:false};this.walking=false;return true;
     }
     updateTablet(dt){
@@ -159,11 +166,51 @@
         return gap<=PLAYER_RADIUS+.09;
       }).sort((a,b)=>Math.hypot(a.x-p.x,a.z-p.z)-Math.hypot(b.x-p.x,b.z-p.z))[0]||null;
     }
+    workerContact(){
+      const p=this.player,gap=box=>Math.hypot(Math.max(Math.abs(p.x-box.x)-box.hx,0),Math.max(Math.abs(p.z-box.z)-box.hz,0));
+      return Math.min(gap(WORKER_DESK),gap({x:WORKER.x,z:WORKER.z-.035,hx:.42,hz:.48}))<=PLAYER_RADIUS+.075;
+    }
+    workerApproach(){
+      const start={x:this.player.x,z:this.player.z},front={x:WORKER_DESK.x,z:WORKER_DESK.z-WORKER_DESK.hz-PLAYER_RADIUS-.12};
+      const left=WORKER_DESK.x-WORKER_DESK.hx-PLAYER_RADIUS-.15,right=WORKER_DESK.x+WORKER_DESK.hx+PLAYER_RADIUS+.15,back=WORKER.z+.37+PLAYER_RADIUS+.18;
+      const points=[start,front,{x:left,z:front.z},{x:right,z:front.z},{x:left,z:back},{x:right,z:back}];
+      const clear=(a,b)=>{const steps=Math.ceil(Math.hypot(b.x-a.x,b.z-a.z)/.075);for(let i=1;i<=steps;i++)if(!this.canMove(a.x+(b.x-a.x)*i/steps,a.z+(b.z-a.z)*i/steps))return false;return true;};
+      const distance=points.map(()=>Infinity),previous=[],visited=new Set();distance[0]=0;
+      for(let step=0;step<points.length;step++){
+        let current=-1;for(let i=0;i<points.length;i++)if(!visited.has(i)&&(current<0||distance[i]<distance[current]))current=i;
+        if(current<0||!Number.isFinite(distance[current]))break;if(current===1){const path=[];for(let i=1;i!==0;i=previous[i])path.unshift(points[i]);return path;}
+        visited.add(current);
+        for(let i=1;i<points.length;i++)if(!visited.has(i)&&clear(points[current],points[i])){const d=distance[current]+Math.hypot(points[i].x-points[current].x,points[i].z-points[current].z);if(d<distance[i]){distance[i]=d;previous[i]=current;}}
+      }
+      return null;
+    }
+    finishWorkerTalk(){
+      if(this.workerTalk){Object.assign(this.workerTalk,{phase:'returning',elapsed:0,returnLook:this.workerTalk.look,moving:false});this.keys={};}
+    }
+    updateWorkerTalk(dt){
+      const talk=this.workerTalk;if(!talk)return;
+      if(talk.phase==='approaching'){
+        if(this.followSeatPath(talk,dt)){talk.moving=false;talk.phase='facing';talk.elapsed=0;talk.turnStart=this.player.dir;}
+      }else if(talk.phase==='facing'){
+        talk.elapsed+=dt;this.player.dir=turn(talk.turnStart,Math.PI,ease(talk.elapsed/.28));
+        if(talk.elapsed>=.28){talk.phase='looking';talk.elapsed=0;}
+      }else if(talk.phase==='looking'){
+        talk.elapsed+=dt;talk.look=ease(talk.elapsed/.45);
+        if(talk.elapsed>=.45){talk.phase='speaking';this.keys={};this.events.onWorkerTalk?.();}
+      }else if(talk.phase==='returning'){
+        talk.elapsed+=dt;talk.look=talk.returnLook*(1-ease(talk.elapsed/.55));
+        if(talk.elapsed>=.55)this.workerTalk=null;
+      }
+    }
     physicalAction(){
+      if(this.workerTalk)return{kind:'worker-busy',title:'Trabalhador do galpão',label:this.workerTalk.phase==='returning'?'Voltando ao trabalho…':'Aguarde…',hint:'A conversa começa quando o auditor estiver de frente à mesa.',disabled:true};
       const seat=this.seating;
       if(seat)return{kind:'stand',title:'Cadeira',label:seat.phase==='seated'?'Levantar':seat.phase==='aligning'?'Posicionando…':seat.phase==='sitting'?'Sentando…':seat.phase==='leaving'?'Saindo…':'Levantando…',hint:seat.phase==='seated'?'E para levantar da cadeira':'Aguarde a animação terminar.',disabled:seat.phase!=='seated'};
+      if(this.workerContact())return{kind:'worker',title:'Trabalhador do galpão',label:'Conversar',hint:'E ou botão: aproximar-se da frente da mesa e conversar',disabled:false};
       if(this.nearbyChair())return{kind:'chair',title:'Cadeira de escritório',label:'Sentar',hint:'E para sentar nesta cadeira',disabled:false};
       const p=this.player;
+      const panel=warehouse?.layout.panels.find(panel=>(p.x-warehouse.layout.wallX)*panel.side>=0&&Math.hypot(p.x-panel.x,p.z-panel.z)<1.3);
+      if(panel)return{kind:'shutter',title:'Porta de enrolar · galpão maior',label:this.shutter?.target?'Fechar porta':'Abrir porta',hint:'E ou botão: abrir / fechar pelo painel',disabled:false};
       if(Math.abs(p.x)<1.65&&Math.abs(p.z)<2.35){
         const d=Math.abs(p.x),dot=(p.x>0?-1:1)*Math.sin(p.dir);
         if(d<.25||dot>.55)return{kind:'door',title:'Porta de vidro · escritório / galpão',label:this.door?.target?'Fechar porta':'Abrir porta',hint:'E para abrir ou fechar a passagem',disabled:false};
@@ -204,6 +251,13 @@
     usePhysical(){
       if(this.paused||this.events.isBlocked?.()||this.tabletRead)return false;
       const action=this.physicalAction();if(!action||action.disabled)return false;
+      if(action.kind==='worker'){
+        const path=this.workerApproach();if(!path){this.events.onNotice?.('O caminho até a frente da mesa está bloqueado. Tente pelo outro lado.');return false;}
+        this.workerTalk={phase:'approaching',path,pathIndex:0,moving:false,look:0};this.keys={};return true;
+      }
+      if(action.kind==='shutter'){
+        this.shutter.target=this.shutter.target?0:1;return true;
+      }
       if(action.kind==='door'){
         this.door.target=this.door.target?0:1;return true;
       }
@@ -218,6 +272,15 @@
       this.walking=false;return true;
     }
     updateFurniture(dt){
+      if(warehouse&&this.shutter){
+        const gate=this.shutter,p=this.player,layout=warehouse.layout;
+        const next=gate.open+Math.sign(gate.target-gate.open)*Math.min(Math.abs(gate.target-gate.open),dt*.40);
+        const occupied=Math.abs(p.x-layout.gateX)<.09+PLAYER_RADIUS+.16&&Math.abs(p.z)<layout.gateHalfWidth+PLAYER_RADIUS+.12;
+        const unsafe=next<gate.open&&occupied&&!warehouse.canPass(next);
+        if(unsafe){if(!gate.blocked)this.events.onNotice?.('Passagem ocupada: fechamento pausado. Saia do vão para a porta fechar.');}
+        else gate.open=next;
+        gate.blocked=unsafe;
+      }
       const door=this.door;
       if(door){
         const next=door.open+Math.sign(door.target-door.open)*Math.min(Math.abs(door.target-door.open),dt*1.05);
@@ -260,7 +323,11 @@
       }
     }
     canMove(x,z){
-      if(x < -12.05||x>16.2||z < -7.08||z>7.04)return false;
+      if(warehouse){
+        if(!warehouse.walkInside(x,z))return false;
+        const layout=warehouse.layout;
+        if(!warehouse.canPass(this.shutter?.open||0)&&Math.abs(x-layout.gateX)<.04+PLAYER_RADIUS&&Math.abs(z)<layout.gateHalfWidth+PLAYER_RADIUS)return false;
+      }else if(x < -12.05||x>16.2||z < -7.08||z>7.04)return false;
       const radiusSq=PLAYER_RADIUS*PLAYER_RADIUS;
       for(const box of this.doorBoxes()){
         if(Math.hypot(Math.max(Math.abs(x-box.x)-box.hx,0),Math.max(Math.abs(z-box.z)-box.hz,0))<PLAYER_RADIUS)return false;
@@ -276,9 +343,10 @@
     faceTarget(pos){const dx=pos[0]-this.player.x,dz=pos[1]-this.player.z;if(Math.hypot(dx,dz)<.001)return;this.player.dir=Math.atan2(dx,-dz);this.yaw=-this.player.dir;}
     cameraPointBlocked(x,y,z){
       const padding=this.cameraPadding;
+      if(warehouse&&x<warehouse.layout.wallX&&(Math.abs(z)>7.49||y>6.02))return true;
       if([x,y,z].some((v,i)=>v<CAMERA_ROOM.min[i]+padding||v>CAMERA_ROOM.max[i]-padding))return true;
-      for(const box of WALL_BOXES){
-        if(y<box.top+padding&&Math.abs(x-box.x)<box.hx+padding&&Math.abs(z-box.z)<box.hz+padding)return true;
+      for(const box of CAMERA_WALLS){
+        if(y>(box.bottom||0)-padding&&y<box.top+padding&&Math.abs(x-box.x)<box.hx+padding&&Math.abs(z-box.z)<box.hz+padding)return true;
       }
       return false;
     }
@@ -291,8 +359,8 @@
         if(d>0)limit=Math.min(limit,(CAMERA_ROOM.max[axis]-padding-from[axis])/d);
         else if(d<0)limit=Math.min(limit,(CAMERA_ROOM.min[axis]+padding-from[axis])/d);
       }
-      for(const wall of WALL_BOXES){
-        const min=[wall.x-wall.hx-padding,-padding,wall.z-wall.hz-padding];
+      for(const wall of CAMERA_WALLS){
+        const min=[wall.x-wall.hx-padding,(wall.bottom||0)-padding,wall.z-wall.hz-padding];
         const max=[wall.x+wall.hx+padding,wall.top+padding,wall.z+wall.hz+padding];
         let enter=0,leave=1;
         for(let axis=0;axis<3;axis++){
@@ -318,8 +386,8 @@
       }
       return distanceSq<radius*radius;
     }
-    update(dt,realDt=dt){this.t+=dt;if(!this.paused&&!this.events.isBlocked?.()){this.updateFurniture(dt);this.updateTablet(realDt);}let yaw=this.yaw;let speed=dt*3.6,dx=0,dz=0; if(this.keys.w||this.keys.arrowup){dx-=Math.sin(yaw);dz-=Math.cos(yaw)}if(this.keys.s||this.keys.arrowdown){dx+=Math.sin(yaw);dz+=Math.cos(yaw)}if(this.keys.a){dx-=Math.cos(yaw);dz+=Math.sin(yaw)}if(this.keys.d){dx+=Math.cos(yaw);dz-=Math.sin(yaw)}if(this.keys.arrowleft)this.yaw+=dt*1.65;if(this.keys.arrowright)this.yaw-=dt*1.65;
-      const moving=Math.hypot(dx,dz)>.01,controlAllowed=!this.paused&&!this.events.isBlocked?.()&&!this.seating&&!this.tabletRead;this.walking=!!this.seating?.moving;
+    update(dt,realDt=dt){this.t+=dt;if(!this.paused)this.updateWorkerTalk(dt);if(!this.paused&&!this.events.isBlocked?.()){this.updateFurniture(dt);this.updateTablet(realDt);}let yaw=this.yaw;let speed=dt*3.6,dx=0,dz=0; if(this.keys.w||this.keys.arrowup){dx-=Math.sin(yaw);dz-=Math.cos(yaw)}if(this.keys.s||this.keys.arrowdown){dx+=Math.sin(yaw);dz+=Math.cos(yaw)}if(this.keys.a){dx-=Math.cos(yaw);dz+=Math.sin(yaw)}if(this.keys.d){dx+=Math.cos(yaw);dz-=Math.sin(yaw)}if(this.keys.arrowleft)this.yaw+=dt*1.65;if(this.keys.arrowright)this.yaw-=dt*1.65;
+      const moving=Math.hypot(dx,dz)>.01,controlAllowed=!this.paused&&!this.events.isBlocked?.()&&!this.seating&&!this.tabletRead&&!this.workerTalk;this.walking=!!(this.seating?.moving||this.workerTalk?.moving);
       if(moving&&controlAllowed){let n=Math.hypot(dx,dz);dx=dx/n*speed;dz=dz/n*speed;const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.12)),stepX=dx/steps,stepZ=dz/steps,startX=this.player.x,startZ=this.player.z;
         for(let i=0;i<steps;i++){if(this.canMove(this.player.x+stepX,this.player.z))this.player.x+=stepX;if(this.canMove(this.player.x,this.player.z+stepZ))this.player.z+=stepZ;}
         const movedX=this.player.x-startX,movedZ=this.player.z-startZ;
@@ -332,7 +400,8 @@
       let x=this.player.x,z=this.player.z,focused=!!this.events.isDialogueOpen?.(),center,fov;
       if(focused){
         // Interview close-up sits in front of Marcos; hide the auditor so he cannot block the speaker.
-        this.eye=[-10.16,2.84,-2.55];center=[-10.7,2.35,-5.20];fov=39;this.cameraScale=1;
+        if(this.workerTalk){this.eye=[5.15,2.75,.35];center=[5.65,1.90,3.115];fov=39;}
+        else{this.eye=[-10.16,2.84,-2.55];center=[-10.7,2.35,-5.20];fov=39;}this.cameraScale=1;
       } else {
         center=[x,1.59,z];fov=55;const cameraAt=scale=>[x+Math.sin(this.yaw)*6.2*scale,center[1]+1.67*scale,z+Math.cos(this.yaw)*6.2*scale];
         const aspect=this.canvas.width/this.canvas.height,tan=Math.tan(fov*Math.PI/360);
@@ -347,7 +416,7 @@
       // This distance can shrink only because of a wall. Furniture never hides the player.
       this.hidePlayer=!focused&&this.cameraScale<(this.hidePlayer ? .24 : .20);
       const nearClip=focused ? .30 : this.cameraNear;
-      this.vp=m4.mul(m4.perspective(fov*Math.PI/180,this.canvas.width/this.canvas.height,nearClip,90),m4.lookAt(this.eye,center,[0,1,0]));}
+      this.vp=m4.mul(m4.perspective(fov*Math.PI/180,this.canvas.width/this.canvas.height,nearClip,warehouse?.layout.farClip||90),m4.lookAt(this.eye,center,[0,1,0]));}
     render(){
       this.resize();
       this.renderer.draw(this);

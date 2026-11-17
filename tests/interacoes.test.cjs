@@ -42,8 +42,8 @@ test('cadeira do funcionário não oferece interação e sua posição antiga fi
   assert.equal(e.canMove(3.3,-2.25),true,'sem colisão invisível no antigo posto');
   for(const [dx,dz] of [[.7,0],[-.7,0],[0,.75],[0,-.75]]){
     Object.assign(e.player,{x:c.x+dx,z:c.z+dz});
-    assert.equal(e.nearbyChair(),null);assert.equal(e.physicalAction(),null);
-    assert.equal(e.usePhysical(),false);assert.equal(e.seating,null);
+    assert.equal(e.nearbyChair(),null);assert.equal(e.physicalAction().kind,'worker');
+    assert.equal(e.seating,null);
   }
 });
 test('contato por qualquer lado independe da orientação e escolhe a cadeira mais próxima',()=>{

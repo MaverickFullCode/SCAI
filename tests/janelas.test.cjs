@@ -4,7 +4,7 @@ const {readFileSync}=require('node:fs');
 const {join}=require('node:path');
 const {runInNewContext}=require('node:vm');
 const context={window:{SCAIGraphics:{uv:()=>[0,0,1,1]}}};
-for(const file of ['assets/malha.js','assets/iluminacao.js','assets/cenario.js','engine3d.js','assets/renderizador.js','assets/porta.js']){
+for(const file of ['assets/galpao.js','assets/malha.js','assets/iluminacao.js','assets/cenario.js','engine3d.js','assets/renderizador.js','assets/porta.js']){
   runInNewContext(readFileSync(join(__dirname,'..',file),'utf8'),context);
 }
 context.SCAIMesh=context.window.SCAIMesh;
@@ -58,7 +58,7 @@ test('janelas e porta compartilham vidro real em malhas transparentes separadas'
 
 test('as duas fachadas têm vãos livres e o panorama fica longe do vidro',()=>{
   const west=firstHit([-12,2,1],[-1,0,0]),north=firstHit([-6.5,2,7],[0,0,1]);
-  assert.ok(west>25&&west<27);assert.ok(north>29&&north<31);
+  assert.ok(west>125&&west<127);assert.ok(north>129&&north<131);
   assert.ok(firstHit([-12,.35,1],[-1,0,0])<1,'o peitoril continua sólido');
   assert.ok(firstHit([-6.5,5,7],[0,0,1])<1,'a parede acima da janela continua sólida');
   const views=[];
@@ -82,7 +82,7 @@ test('fundo fechado cobre vistas rasantes e para baixo nos dois lados e cantos d
     const origin=side==='west'?[-12.3,1.8,along]:[-6.5+along*.8,1.8,7.25];
     const direction=side==='west'?[-Math.cos(a)*c,Math.sin(p),Math.sin(a)*c]:[Math.sin(a)*c,Math.sin(p),Math.cos(a)*c];
     const hit=firstHit(origin,direction,true);
-    assert.ok(Number.isFinite(hit)&&hit<90,`${side}, ${along}, ${angle}, ${pitch}: ${hit}`);
+    assert.ok(Number.isFinite(hit)&&hit<260,`${side}, ${along}, ${angle}, ${pitch}: ${hit}`);
   }
 });
 
@@ -120,7 +120,7 @@ test('o exterior distante permanece no alcance da câmera sem liberar a saída d
   const e=Object.assign(Object.create(Engine.prototype),{canvas:{width:1365,height:864},player:{x:15.6,z:0,dir:0},
     events:{},keys:{},t:0,walkDistance:0,yaw:Math.PI/2,cameraScale:1,cameraNear:.12,cameraPadding:.22,hidePlayer:false});
   e.update(.016);
-  const point=[-38,2,-2],m=e.vp,w=m[3]*point[0]+m[7]*point[1]+m[11]*point[2]+m[15];
+  const point=[-138,2,-2],m=e.vp,w=m[3]*point[0]+m[7]*point[1]+m[11]*point[2]+m[15];
   const depth=(m[2]*point[0]+m[6]*point[1]+m[10]*point[2]+m[14])/w;
   assert.ok(w>0&&depth>-1&&depth<1,'o horizonte não pode ser cortado pelo plano distante');
   assert.equal(e.canMove(-12.4,1),false);assert.equal(e.canMove(-6,7.3),false);

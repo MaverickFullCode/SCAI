@@ -17,7 +17,7 @@
     {id:'adverse',name:'Adversa',subtitle:'As provas mostram erros relevantes que comprometem as contas como um todo.'},
     {id:'disclaimer',name:'Abstenção de opinião',subtitle:'Faltam provas e os possíveis problemas podem comprometer as contas como um todo.'}
   ];
-  const st={stage:'welcome',dialogStep:0,dialogReply:null,interviewScore:0,interviewPath:[],plan:Object.fromEntries(techs.map(t=>[t.id,0])),executed:Object.fromEntries(techs.map(t=>[t.id,0])),spent:0,budget:8,adjustments:0,adjustmentOpen:false,report:null,modal:false,dialogueOpen:false,speaking:false,result:null};
+  const st={stage:'welcome',dialogStep:0,dialogReply:null,interviewScore:0,interviewPath:[],plan:Object.fromEntries(techs.map(t=>[t.id,0])),executed:Object.fromEntries(techs.map(t=>[t.id,0])),spent:0,budget:8,adjustments:0,adjustmentOpen:false,report:null,modal:false,dialogueOpen:false,dialogueSpeaker:null,speaking:false,result:null};
   const SPEECH_CPS=30;
   function shuffleResponses(options){
     const shuffled=options.slice();
@@ -77,7 +77,7 @@
   const inner=html=>`<div class="modal-inner">${html}</div>`;
   function show(html){closeHudPanels();$('#modalBody').innerHTML=inner(html);$('#modal').hidden=false;st.modal=true;$('.modalCard')?.scrollTo(0,0);}
   function stopSpeech(){speechToken++;if(speechTimer!==null){clearTimeout(speechTimer);speechTimer=null;}st.speaking=false;}
-  function endDialogue(){stopSpeech();st.dialogueOpen=false;$('#dialoguePanel').hidden=true;$('#dialogueChoices').innerHTML='';$('#dialogueContinue').hidden=true;}
+  function endDialogue(){const worker=st.dialogueSpeaker==='worker';stopSpeech();st.dialogueSpeaker=null;if(worker)engine?.finishWorkerTalk();$('#dialogueContinue').textContent='Continuar →';st.dialogueOpen=false;$('#dialoguePanel').hidden=true;$('#dialogueChoices').innerHTML='';$('#dialogueContinue').hidden=true;}
   function typeSpeech(text, onComplete) {
     stopSpeech();
     const token = speechToken;
@@ -120,7 +120,7 @@
     }).join('');
     const o={welcome:['Investigue o estoque','Descubra se as mercadorias e os valores registrados estão corretos.'],interview:['Converse com Marcos','Vá ao gestor, na sala de reunião. Aproxime-se e use Q ou Interagir.'],planning:['Escolha seus testes','Você tem 8 créditos. Selecione cada teste que pretende fazer uma vez.'],execution:['Confira os registros e o estoque','Vá aos círculos laranja. Use Q ou Interagir para abrir um teste; verde indica concluído.'],report:['Escolha sua conclusão','Releia os resultados e indique o que deve constar no relatório.'],result:['Veja o que aprendeu','Confira sua conclusão e os testes que ajudaram a explicar a diferença.']}[st.stage];
     $('#objectiveTitle').textContent=o[0];$('#objectiveText').textContent=o[1];$('#missionProgress span').style.width=[8,19,39,65,83,100][idx]+'%';$('#pointsText').textContent=`${credits(st.budget-st.spent)}`;
-    $('#missionTip').textContent=st.stage==='execution'?'Localizar objetivo aponta o caminho; você precisa caminhar.':'WASD: andar · arrastar: câmera · Q: missão · E: cadeira/porta';
+    $('#missionTip').textContent=st.stage==='execution'?'Localizar objetivo aponta o caminho; você precisa caminhar.':'WASD: andar · arrastar: câmera · Q: missão · E: ações próximas';
     $('#reportBtn').hidden=st.stage!=='execution';let q='';
     if(st.stage==='welcome'||st.stage==='interview')q='Primeiro, ouça o gestor. Depois, escolha como investigar.';
     if(st.stage==='planning')q=`Planejado: <b>${planTotal()} de ${st.budget} créditos</b><br>Escolher não gasta; executar gasta.`;
@@ -129,7 +129,7 @@
 
     $('#quickContent').innerHTML=q;
   }
-  function intro(){setStage('welcome');show(`<div class="modal-label">MISSÃO 01 · ESTOQUE</div><h2 id="modalTitle" class="modal-title">O sistema diz uma coisa. O galpão, outra.</h2><p class="modal-desc">Você foi contratado para conferir o estoque da Aurora. Seu papel é buscar provas antes de concluir se as contas estão corretas.</p><div class="twoCol"><div class="miniCard"><h3>1 · Ouça e planeje</h3><p>Converse com Marcos. Escolha testes dentro dos 8 créditos disponíveis.</p></div><div class="miniCard"><h3>2 · Confira e conclua</h3><p>Faça os testes nos círculos laranja. Reúna os resultados e escolha seu relatório.</p></div></div><div class="notice"><b>Como jogar:</b> WASD para andar; arraste para girar a câmera. Q conversa ou abre testes. E senta, levanta e abre ou fecha a porta. F consulta o tablet por 3 segundos, apenas como animação. No celular, use os botões na tela.<br>Missão e Trabalho mostram sua tarefa e saldo. Localizar objetivo aponta o caminho, sem mover você. Você pode errar e tentar novamente.</div><div class="buttons"><button class="primary" id="startMission">Procurar Marcos →</button></div>`);$('#startMission').onclick=()=>{hide();setStage('interview');note('Encontre Marcos na sala de reunião. Use Localizar objetivo para se orientar.');};}
+  function intro(){setStage('welcome');show(`<div class="modal-label">MISSÃO 01 · ESTOQUE</div><h2 id="modalTitle" class="modal-title">O sistema diz uma coisa. O galpão, outra.</h2><p class="modal-desc">Você foi contratado para conferir o estoque da Aurora. Seu papel é buscar provas antes de concluir se as contas estão corretas.</p><div class="twoCol"><div class="miniCard"><h3>1 · Ouça e planeje</h3><p>Converse com Marcos. Escolha testes dentro dos 8 créditos disponíveis.</p></div><div class="miniCard"><h3>2 · Confira e conclua</h3><p>Faça os testes nos círculos laranja. Reúna os resultados e escolha seu relatório.</p></div></div><div class="notice"><b>Como jogar:</b> WASD para andar; arraste para girar a câmera. Q conversa ou abre testes. E senta, levanta, abre ou fecha portas e conversa com o trabalhador. F consulta o tablet por 3 segundos, apenas como animação. No celular, use os botões na tela.<br>Missão e Trabalho mostram sua tarefa e saldo. Localizar objetivo aponta o caminho, sem mover você. Você pode errar e tentar novamente.</div><div class="buttons"><button class="primary" id="startMission">Procurar Marcos →</button></div>`);$('#startMission').onclick=()=>{hide();setStage('interview');note('Encontre Marcos na sala de reunião. Use Localizar objetivo para se orientar.');};}
 
   const interview=[
     {s:'Bom dia! Nossa contagem encontrou menos produtos do que o sistema registra. Pode ser uma falha na contagem ou nos registros. Por onde você começaria?',opts:[
@@ -141,11 +141,21 @@
       {t:'Concluir agora, desde que o gestor assuma por escrito a correção posterior.',good:false,response:'O compromisso por escrito registra a promessa, mas não comprova que as contas atuais estão corretas. Confira o problema e a correção antes de concluir.'},
       {t:'Adiar a publicação até conferir todo o estoque, mesmo sem sinais de outros erros.',good:false,response:'Ampliar testes pode ser necessário, mas exigir uma revisão de tudo antes de avaliar o risco desperdiça tempo. Comece pela diferença identificada e amplie se os resultados pedirem.'}]}
   ];
+  function workerDialogue(){
+    closeHudPanels();st.dialogueSpeaker='worker';st.dialogueOpen=true;
+    $('#dialoguePanel').hidden=false;$('#dialoguePanel').scrollTop=0;$('#dialogueChoices').innerHTML='';$('#dialogueContinue').hidden=true;
+    $('#dialogueSpeaker').textContent='TRABALHADOR · ESTOQUE';$('#dialogueStep').textContent='CONVERSA';$('#dialogueHint').textContent='O trabalhador está falando…';
+    typeSpeech('Olha, tem caminhão esperando, número que não bate e todo mundo quer tudo pra ontem! Já conferi esse caderno três vezes. Me dá um minuto, porque eu não consigo resolver tudo sozinho.',()=>{
+      $('#dialogueHint').textContent='E ou botão para encerrar.';$('#dialogueContinue').textContent='Encerrar conversa';$('#dialogueContinue').hidden=false;
+    });
+    $('#dialogueContinue').onclick=()=>{if(!st.speaking)endDialogue();};
+  }
   function interviewModal(){let d=interview[st.dialogStep];if(!d){setStage('planning');planningIntro();return;}
     // The second question changes according to how the student handled the initial inventory discrepancy.
     const line=st.dialogStep===1
       ? `${st.interviewPath[0]?'Vamos separar os registros para a conferência.':'Ainda precisamos esclarecer a causa da diferença.'} ${d.s}`
       :d.s;
+    st.dialogueSpeaker='manager';
     closeHudPanels();st.modal=false;$('#modal').hidden=true;st.dialogueOpen=true;$('#dialoguePanel').hidden=false;$('#dialoguePanel').scrollTop=0;$('#dialogueChoices').scrollTop=0;
     $('#dialogueSpeaker').textContent='MARCOS · GESTOR OPERACIONAL';$('#dialogueStep').textContent=`ENTREVISTA ${st.dialogStep+1} / ${interview.length}`;
     $('#dialogueChoices').innerHTML='';$('#dialogueContinue').hidden=true;$('#dialogueHint').textContent='Ouça o gestor; as opções aparecem quando a fala terminar.';
@@ -174,8 +184,8 @@
   ];}
   function relevantSpots(){if(st.stage==='interview')return [{key:'interview',name:'Falar com o gestor',x:interviewTarget.x,z:interviewTarget.z,y:.05}];if(st.stage==='execution')return techs.map(t=>({key:t.id,name:t.place,x:t.pos[0],z:t.pos[1],y:.05}));return [];}
   function nearest(){let list=relevantSpots().map(h=>({...h,dist:engine?engine.distance(h.x,h.z):999})).sort((a,b)=>a.dist-b.dist);return list[0]||null;}
-  function interact(h){if(st.modal||st.dialogueOpen)return;if(engine?.tabletRead){note('Aguarde a consulta do tablet terminar.');return;}if(engine?.seating){note('Pressione E ou toque em Levantar antes de continuar a missão.');return;}if(!h)return;if(h.dist>2.85){note('Aproxime-se do local antes de interagir.');return;}if(h.key==='interview')interviewModal();else if(st.stage==='execution')procedureModal(h.key);}
-  function guide(){if(!engine)return;if(engine.tabletRead){note('Aguarde a consulta do tablet terminar.');return;}if(engine.seating){note('Levante-se da cadeira para localizar o próximo objetivo.');return;}if(st.stage==='welcome'){intro();return;}if(st.stage==='planning'){planModal();return;}if(st.stage==='report'){reportModal();return;}if(st.stage==='result'){resultModal();return;}
+  function interact(h){if(engine?.workerTalk||st.modal||st.dialogueOpen)return;if(engine?.tabletRead){note('Aguarde a consulta do tablet terminar.');return;}if(engine?.seating){note('Pressione E ou toque em Levantar antes de continuar a missão.');return;}if(!h)return;if(h.dist>2.85){note('Aproxime-se do local antes de interagir.');return;}if(h.key==='interview')interviewModal();else if(st.stage==='execution')procedureModal(h.key);}
+  function guide(){if(!engine)return;if(engine.workerTalk){note('Aguarde a conversa terminar.');return;}if(engine.tabletRead){note('Aguarde a consulta do tablet terminar.');return;}if(engine.seating){note('Levante-se da cadeira para localizar o próximo objetivo.');return;}if(st.stage==='welcome'){intro();return;}if(st.stage==='planning'){planModal();return;}if(st.stage==='report'){reportModal();return;}if(st.stage==='result'){resultModal();return;}
     let h;
     if(st.stage==='execution'){
       const remaining=st.budget-st.spent;
@@ -220,10 +230,10 @@
     let physical=blocked?null:engine.physicalAction?.();
     if(physical&&engine.seating?.phase==='aligning')physical={...physical,label:'Posicionando…',hint:'Aguarde o auditor se posicionar para sentar.',disabled:true};
     if(physical&&engine.seating?.phase==='leaving')physical={...physical,label:'Saindo…',hint:'Aguarde o auditor se afastar da cadeira.',disabled:true};
-    $('#actionBtn').disabled=!!(engine.seating||engine.tabletRead);$('#reportBtn').disabled=!!(engine.seating||engine.tabletRead);
-    $('#tabletBtn').disabled=blocked||!!engine.tabletRead||!!(engine.seating&&engine.seating.phase!=='seated');
+    $('#actionBtn').disabled=!!(engine.seating||engine.tabletRead||engine.workerTalk);$('#reportBtn').disabled=!!(engine.seating||engine.tabletRead||engine.workerTalk);
+    $('#tabletBtn').disabled=blocked||!!engine.tabletRead||!!engine.workerTalk||!!(engine.seating&&engine.seating.phase!=='seated');
     if(physical&&engine.tabletRead)physical={...physical,disabled:true};
-    $('#action').classList.toggle('visible',!blocked&&!engine.seating&&!!near&&near.dist<=2.85);
+    $('#action').classList.toggle('visible',!blocked&&!engine.seating&&!engine.workerTalk&&!!near&&near.dist<=2.85);
     if(near){$('#actionTitle').textContent=near.name;$('#actionSubtitle').textContent=st.stage==='interview'?'Pressione Q para conversar':'Q ou Interagir: abrir teste ou rever resultado';}
     $('#physicalAction').classList.toggle('visible',!!physical);
     if(physical){
@@ -231,7 +241,7 @@
       $('#physicalBtn').textContent=physical.label;$('#physicalBtn').disabled=!!physical.disabled;
       $('#physicalBtn').setAttribute('aria-label',`${physical.label}: ${physical.title}`);
     }
-    $('#location').textContent=engine.player.x>0?'● Centro de distribuição':'● Escritório de auditoria';}
+    $('#location').textContent=engine.player.x>16.75?'● Galpão de expansão':engine.player.x>0?'● Centro de distribuição':'● Escritório de auditoria';}
   let refreshTimer=0;
   function bindTouchControls() {
     const pressedPointers = new Map();
@@ -283,13 +293,13 @@
       });
     }
   }
-  function boot(){bindHudPanels();try{engine=new SCAI3D.Engine($('#scene'),{isBlocked:()=>st.modal||st.dialogueOpen,isTalking:()=>st.speaking,isDialogueOpen:()=>st.dialogueOpen,onInteract:()=>{if(!st.modal&&!st.dialogueOpen&&!engine?.seating)interact(near)},onNotice:note,onFrame:(e)=>{refreshTimer++;if(refreshTimer%6===0)updateNearbyAction()}});}
+  function boot(){bindHudPanels();try{engine=new SCAI3D.Engine($('#scene'),{isBlocked:()=>st.modal||st.dialogueOpen,isTalking:()=>st.speaking&&st.dialogueSpeaker==='manager',isWorkerTalking:()=>st.speaking&&st.dialogueSpeaker==='worker',onWorkerTalk:workerDialogue,isDialogueOpen:()=>st.dialogueOpen,onInteract:()=>{if(!st.modal&&!st.dialogueOpen&&!engine?.seating)interact(near)},onNotice:note,onFrame:(e)=>{refreshTimer++;if(refreshTimer%6===0)updateNearbyAction()}});}
     catch(e){console.error(e);$('#fallback').hidden=false;$('#fallback').style.display='grid';return;}
     $('#quality').onclick=()=>{engine.setEco(!engine.low);$('#quality').textContent=engine.low?'⚙ Eco ✓':'⚙ Eco';note(engine.low?'Modo econômico: imagem mais simples para jogar com mais fluidez.':'Imagem em qualidade padrão.')};
     $('#exit').onclick=()=>{if(window.parent!==window){parent.postMessage({type:'scai:exit'},'*')}else location.href='../SCAI.html'};
     $('#tabletBtn').onclick=()=>{engine.consultTablet();updateNearbyAction();};$('#actionBtn').onclick=()=>interact(near);$('#physicalBtn').onclick=()=>{if(st.modal||st.dialogueOpen)return;engine.usePhysical();updateNearbyAction();};$('#routeBtn').onclick=()=>{closeHudPanels();guide();};$('#reportBtn').onclick=reportModal;$('#modalClose').onclick=()=>{hide();if(st.stage==='welcome')setStage('interview')};
     bindTouchControls();
-    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&st.modal&&st.stage!=='result')hide();});
+    document.addEventListener('keydown',e=>{if(st.dialogueSpeaker==='worker'&&(e.key.toLowerCase()==='e'||e.key==='Escape')&&!st.speaking){e.preventDefault();endDialogue();return;}if(e.key==='Escape'&&st.modal&&st.stage!=='result')hide();});
     intro();}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();

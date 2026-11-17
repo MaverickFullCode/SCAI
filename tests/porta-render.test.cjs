@@ -4,7 +4,7 @@ const {readFileSync}=require('node:fs');
 const {join}=require('node:path');
 const {runInNewContext}=require('node:vm');
 const context={window:{}};
-for(const file of ['assets/malha.js','engine3d.js','assets/iluminacao.js','assets/renderizador.js'])runInNewContext(readFileSync(join(__dirname,'..',file),'utf8'),context);
+for(const file of ['assets/galpao.js','assets/malha.js','engine3d.js','assets/iluminacao.js','assets/renderizador.js'])runInNewContext(readFileSync(join(__dirname,'..',file),'utf8'),context);
 context.SCAIMesh=context.window.SCAIMesh;
 runInNewContext(readFileSync(join(__dirname,'../assets/porta.js'),'utf8'),context);
 const {SCAIDoor,SCAIRenderer:Renderer,SCAI3D:{Engine}}=context.window;
