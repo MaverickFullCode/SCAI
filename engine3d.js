@@ -72,8 +72,10 @@
       this.player = {x:-5.2, z:-.25, dir:2.75};
       this.yaw = .78;
       this.keys = {};
+      this.joystick = null;
       this.t = 0;
       this.walkDistance = 0;
+      this.running=false;this.gait=null;
       this.eye = [0, 3, 0];
       this.vp = null;
       this.paused = false;
@@ -97,7 +99,7 @@
       let cameraPointer = null, lastX = 0;
       document.addEventListener('keydown', event => {
         const key = event.key.toLowerCase();
-        if (['w','s','a','d','arrowup','arrowdown','arrowleft','arrowright','e','q','f',' '].includes(key)) {
+        if (['w','s','a','d','arrowup','arrowdown','arrowleft','arrowright','e','q','f','c',' '].includes(key)) {
           if (['INPUT','SELECT','TEXTAREA'].includes(document.activeElement?.tagName)) return;
           event.preventDefault();
         }
@@ -131,6 +133,7 @@
       }
       const resetInput = () => {
         this.keys = {};
+        this.setJoystick(0,0);
         cameraPointer = null;
       };
       window.addEventListener('blur', resetInput);
@@ -144,6 +147,17 @@
     resize(){const scale=this.low?.68:1;const dpr=Math.min(devicePixelRatio||1,1.3)*scale;const w=Math.max(2,Math.floor(this.canvas.clientWidth*dpr)),h=Math.max(2,Math.floor(this.canvas.clientHeight*dpr));if(this.canvas.width!==w||this.canvas.height!==h){this.canvas.width=w;this.canvas.height=h;this.gl.viewport(0,0,w,h)}}
     setEco(val){this.low=!!val;this.resize()}
     setInput(key,val){this.keys[key]=val}
+    canUseJoystick(){
+      return !this.paused&&!this.events.isBlocked?.()&&!this.seating&&!this.workerTalk&&
+        !(this.tabletRead&&this.vehicleSeat?.phase!=='driving')&&!(this.vehicleSeat&&this.vehicleSeat.phase!=='driving');
+    }
+    setJoystick(x,y){
+      const distance=Math.hypot(x,y),deadZone=.12;
+      if(!Number.isFinite(distance)||distance<=deadZone||!this.canUseJoystick()){this.joystick=null;return;}
+      const power=(Math.min(1,distance)-deadZone)/(1-deadZone),sector=Math.round(Math.atan2(x,-y)/(Math.PI/4));
+      const angle=sector*Math.PI/4,sin=Math.sin(angle),cos=Math.cos(angle);
+      this.joystick={angle,power,x:Math.abs(sin)<1e-8?0:sin*power,y:Math.abs(cos)<1e-8?0:-cos*power};
+    }
     consultTablet(){
       if(this.paused||this.events.isBlocked?.()||this.tabletRead||this.workerTalk||(this.vehicleSeat&&this.vehicleSeat.phase!=='driving')||(this.seating&&this.seating.phase!=='seated'))return false;
       this.tabletRead={elapsed:0,blend:0,screen:false};this.walking=false;return true;
@@ -207,7 +221,8 @@
       if(seat.phase==='approaching'){
         if(this.followSeatPath(seat,dt)){seat.phase='boarding';seat.elapsed=0;seat.moving=false;seat.turnStart=this.player.dir;}
       }else if(seat.phase==='driving'){
-        const angle=v.angle;forkliftAPI.move(v,dt,Number(!!(this.keys.w||this.keys.arrowup))-Number(!!(this.keys.s||this.keys.arrowdown)),Number(!!this.keys.d)-Number(!!this.keys.a),this.vehicleEnvironment());
+        const angle=v.angle,throttle=this.joystick?-this.joystick.y:Number(!!(this.keys.w||this.keys.arrowup))-Number(!!(this.keys.s||this.keys.arrowdown)),steering=this.joystick?this.joystick.x:Number(!!this.keys.d)-Number(!!this.keys.a);
+        forkliftAPI.move(v,dt,throttle,steering,this.vehicleEnvironment());
         this.yaw-=v.angle-angle;const p=forkliftAPI.point(v,forkliftAPI.seatX,0);Object.assign(this.player,{...p,dir:Math.PI/2+v.angle});
       }else{
         seat.elapsed+=dt;const t=Math.min(1,seat.elapsed/2.5),progress=seat.phase==='boarding'?t:1-t;
@@ -441,17 +456,52 @@
       }
       return distanceSq<radius*radius;
     }
-    update(dt,realDt=dt){this.t+=dt;if(!this.paused)this.updateWorkerTalk(dt);if(!this.paused&&!this.events.isBlocked?.()){this.updateFurniture(dt);this.updateTablet(realDt);this.updateVehicle(dt);}let yaw=this.yaw;let speed=dt*3.6,dx=0,dz=0; if(this.keys.w||this.keys.arrowup){dx-=Math.sin(yaw);dz-=Math.cos(yaw)}if(this.keys.s||this.keys.arrowdown){dx+=Math.sin(yaw);dz+=Math.cos(yaw)}if(this.keys.a){dx-=Math.cos(yaw);dz+=Math.sin(yaw)}if(this.keys.d){dx+=Math.cos(yaw);dz-=Math.sin(yaw)}if(this.keys.arrowleft)this.yaw+=dt*1.65;if(this.keys.arrowright)this.yaw-=dt*1.65;
-      const moving=Math.hypot(dx,dz)>.01,controlAllowed=!this.paused&&!this.events.isBlocked?.()&&!this.seating&&!this.tabletRead&&!this.workerTalk&&!this.vehicleSeat;this.walking=!!(this.seating?.moving||this.workerTalk?.moving||this.vehicleSeat?.moving);
+    updateGait(distance,dt){
+      if(!this.walking||distance<=.000001){if(!this.walking)this.gait=null;return;}
+      const travel=this.walkDistance,before=travel-distance;
+      if(!this.gait){const cycle=before/2.2;this.gait={cycle,stride:2.2,runBlend:0,feet:[0,.5].map(offset=>{const phase=(cycle+offset)%1;return{index:Math.floor(cycle+offset),plant:before-2.2*phase+2.2*.54/2,footZ:0};})};}
+      // Keep the cycle continuous when C changes the stride. Advance it using
+      // actual travel, so collisions cannot make the legs outrun the character.
+      const gait=this.gait;
+      gait.runBlend+=Math.max(-dt/.16,Math.min(dt/.16,(this.running?1:0)-gait.runBlend));
+      gait.stride=2.2+.8*gait.runBlend;gait.cycle+=distance/gait.stride;
+      for(let i=0;i<2;i++){
+        const step=gait.cycle+i*.5,index=Math.floor(step),phase=step-index,foot=gait.feet[i],half=gait.stride*.54/2;
+        if(index!==foot.index){foot.index=index;foot.plant=travel-phase*gait.stride+half;}
+        // A support foot retains its landing point, including during the
+        // walk/run transition; the airborne foot heads towards the next one.
+        if(phase<.54)foot.footZ=travel-foot.plant;
+        else{const u=(phase-.54)/.46,smooth=u*u*(3-2*u),landing=travel+gait.stride*(1-phase)+half;foot.footZ=travel-(foot.plant+(landing-foot.plant)*smooth);}
+      }
+    }
+    update(dt,realDt=dt){
+      const distanceBefore=this.walkDistance;this.t+=dt;
+      if(!this.canUseJoystick())this.setJoystick(0,0);
+      if(!this.paused)this.updateWorkerTalk(dt);
+      if(!this.paused&&!this.events.isBlocked?.()){this.updateFurniture(dt);this.updateTablet(realDt);this.updateVehicle(dt);}
+      if(this.keys.arrowleft)this.yaw+=dt*1.65;if(this.keys.arrowright)this.yaw-=dt*1.65;
+      // Recompute from the current camera on every frame, even if the finger stays still.
+      const yaw=this.yaw,stick=this.joystick,stickDir=stick?stick.angle-yaw:0;
+      let speed=dt*(this.keys.c?7.2:3.6),dx=0,dz=0;
+      if(stick){dx=Math.sin(stickDir);dz=-Math.cos(stickDir);speed*=stick.power;}
+      else{
+        if(this.keys.w||this.keys.arrowup){dx-=Math.sin(yaw);dz-=Math.cos(yaw)}
+        if(this.keys.s||this.keys.arrowdown){dx+=Math.sin(yaw);dz+=Math.cos(yaw)}
+        if(this.keys.a){dx-=Math.cos(yaw);dz+=Math.sin(yaw)}
+        if(this.keys.d){dx+=Math.cos(yaw);dz-=Math.sin(yaw)}
+      }
+      const moving=Math.hypot(dx,dz)>.01,controlAllowed=!this.paused&&!this.events.isBlocked?.()&&!this.seating&&!this.tabletRead&&!this.workerTalk&&!this.vehicleSeat;this.running=false;this.walking=!!(this.seating?.moving||this.workerTalk?.moving||this.vehicleSeat?.moving);
       if(moving&&controlAllowed){let n=Math.hypot(dx,dz);dx=dx/n*speed;dz=dz/n*speed;const steps=Math.max(1,Math.ceil(Math.hypot(dx,dz)/.12)),stepX=dx/steps,stepZ=dz/steps,startX=this.player.x,startZ=this.player.z;
+        if(stick)this.player.dir=stickDir;
         for(let i=0;i<steps;i++){if(this.canMove(this.player.x+stepX,this.player.z))this.player.x+=stepX;if(this.canMove(this.player.x,this.player.z+stepZ))this.player.z+=stepZ;}
         const movedX=this.player.x-startX,movedZ=this.player.z-startZ;
         const distanceMoved = Math.hypot(movedX,movedZ);
-        if(distanceMoved>.001){
-          this.walking=true;
+        if(distanceMoved>(stick?.000001:.001)){
+          this.walking=true;this.running=!!this.keys.c;
           this.walkDistance+=distanceMoved;
-          this.player.dir=Math.atan2(movedX,-movedZ);
+          if(!stick)this.player.dir=Math.atan2(movedX,-movedZ);
         }}
+      this.updateGait(this.walkDistance-distanceBefore,dt);
       let x=this.player.x,z=this.player.z,focused=!!this.events.isDialogueOpen?.(),center,fov;
       if(focused){
         // Interview close-up sits in front of Marcos; hide the auditor so he cannot block the speaker.

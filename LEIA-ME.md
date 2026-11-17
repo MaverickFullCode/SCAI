@@ -1,4 +1,4 @@
-# SCAI • Versão Alfa 0.5.1
+# SCAI • Versão Alfa 0.5.2
 
 Leia também [MEMORIA-DO-PROJETO.md](MEMORIA-DO-PROJETO.md) para o registro permanente da conversa de origem, metodologia e decisões visuais.
 
@@ -22,7 +22,7 @@ Veja [os personagens da Versão Alfa 0.2](docs/personagens-realistas.md), aprova
 
 ## Controles
 
-Na Versão Alfa 0.5.1, **Q** aciona as conversas e procedimentos da missão. **E** usa cadeiras, portas, a conversa com o trabalhador e a empilhadeira. Os botões de ação também funcionam por toque. Ao sentar, o auditor fica ancorado à cadeira; pressione E novamente para levantar. A câmera continua livre. Veja [cadeiras e porta de vidro](docs/cadeiras-e-porta.md) para os controles, capturas e validação.
+Na Versão Alfa 0.5.2, **Q** aciona as conversas e procedimentos da missão. **E** usa cadeiras, portas, a conversa com o trabalhador e a empilhadeira. Os botões de ação também funcionam por toque. Ao sentar, o auditor fica ancorado à cadeira; pressione E novamente para levantar. A câmera continua livre. Veja [cadeiras e porta de vidro](docs/cadeiras-e-porta.md) para os controles, capturas e validação.
 
 O funcionário do galpão fica sentado atrás da mesa. Ao encostar nele ou na bancada, use **E / Conversar**: o auditor caminha até a frente, o trabalhador vira só a cabeça e fala com legenda a 30 caracteres por segundo. Ao terminar, use **Encerrar conversa** ou E para ele voltar ao documento. A conversa não altera créditos nem objetivos. Sua cadeira permanece ocupada; as oito cadeiras do escritório continuam disponíveis para o jogador.
 
@@ -30,7 +30,7 @@ As janelas receberam o mesmo vidro da porta e o panorama envolve o prédio em um
 
 No celular, os botões **Missão** e **Trabalho** abrem os respectivos painéis do topo, que começam recolhidos. Use ×, **Recolher** ou toque novamente no botão para fechá-los. A pergunta fica fixa durante a escolha das respostas. Veja as capturas e a validação em [Interface em celulares](docs/interface-celular.md).
 
-**Computador:** WASD ou ↑↓ para caminhar, ←→ ou arrastar com mouse para girar câmera, Q para interagir. **Celular/tablet:** botões direcionais, botões de câmera, arrastar o dedo na cena e botão Interagir. O botão **Localizar objetivo** procura um teste pendente e acessível pelo saldo, gira o auditor e a câmera em sua direção e indica os pontos com marcadores 3D baixos, fixos ao piso (laranja pendente e verde concluído); não teletransporta o personagem.
+**Computador:** WASD ou ↑↓ para caminhar; segure **C** junto com o movimento para correr ao dobro da velocidade e solte para voltar a andar. ←→ ou arrastar com mouse gira a câmera; Q interage com a missão. **Celular/tablet:** arraste o controle circular transparente em uma das oito direções, relativas à câmera: para cima avança na direção em que ela aponta; para baixo vem em direção à câmera. Laterais e diagonais também seguem a câmera. O auditor vira o corpo para onde anda; girar a câmera atualiza o rumo mesmo mantendo o dedo parado. Puxar mais longe aumenta gradualmente a velocidade; voltar ao centro ou soltar para o movimento. O círculo menor fica limitado ao maior e retorna ao centro ao soltar. Segure também **C**, à esquerda de **F**, para correr. Os botões de câmera, o gesto de arrastar a cena e o botão Interagir continuam disponíveis. Na empilhadeira, o controle circular acelera à frente ou em ré e as laterais controlam o volante. O botão **Localizar objetivo** procura um teste pendente e acessível pelo saldo, gira o auditor e a câmera em sua direção e indica os pontos com marcadores 3D baixos, fixos ao piso (laranja pendente e verde concluído); não teletransporta o personagem.
 
 O objetivo **Painel de indicadores** fica em frente ao armário baixo com pastas e livros no escritório. Ao concluir a missão com sucesso, a etapa **Avaliação** fica verde e recebe ✓, como as etapas anteriores.
 
@@ -72,7 +72,7 @@ Referência para as distinções entre relatórios: [NBC TA 700/705, CFC](https:
 
 Na ramificação `codex/teste-nova-implementacao`, o painel ao lado da porta metálica oferece **E / Abrir porta / Fechar porta**. Há um painel equivalente do outro lado; os dois comandam a mesma porta. As lâminas sobem e recolhem na caixa superior. Aproximar-se não aciona a porta, e um fechamento solicitado pausa se alguém estiver no vão.
 
-Atrás da porta há um galpão fechado, com piso de concreto igual ao existente, cerca de **80 × 55 unidades** e altura de 10,8 unidades. Piso livre de cargas e móveis, estrutura no perímetro e sob o teto, preparado como espaço para futuras implementações. A empilhadeira pode ser dirigida por E / Entrar: W/S para frente e ré, A/D para virar e E / Sair para estacionar e desembarcar. No celular, use as setas de movimento e o botão de ação. Veja [a prévia e os controles](docs/galpao-expansao.md). Recurso integrado à main na Versão Alfa 0.5.1.
+Atrás da porta há um galpão fechado, com piso de concreto igual ao existente, cerca de **80 × 55 unidades** e altura de 10,8 unidades. Piso livre de cargas e móveis, estrutura no perímetro e sob o teto, preparado como espaço para futuras implementações. A empilhadeira pode ser dirigida por E / Entrar: W/S para frente e ré, A/D para virar e E / Sair para estacionar e desembarcar. No celular/tablet, use o controle circular e o botão de ação. Veja [a prévia e os controles](docs/galpao-expansao.md). Recurso integrado à main na Versão Alfa 0.5.1.
 
 Conversa do trabalhador validada com trajetos de frente/lados/costas, corpo e braços preservados durante a fala, retorno suave da cabeça e interface em computador/celular emulados. Prévia em [conversa do trabalhador](docs/previa-conversa-trabalhador.jpg).
 
@@ -87,3 +87,9 @@ Implementação registrada na ramificação `codex/teste-nova-implementacao` com
 ### Revisão do embarque e do tablet
 
 A subida usa apoios independentes: um pé no degrau lateral, o outro no piso da cabine e depois os dois pés dentro antes de sentar, com o corpo abaixado para passar sob o teto. O desembarque inverte a sequência. **F** e o botão F também funcionam enquanto dirige, mantendo a mão esquerda no volante e os comandos do veículo ativos. A velocidade máxima passou de 5 para 10 unidades/s à frente e de 2,6 para 5,2 unidades/s na ré; aceleração e freio acompanham o aumento. [Embarque](docs/previa-embarque-empilhadeira.jpg) · [Tablet durante a direção](docs/previa-tablet-dirigindo.jpg).
+
+## Corrida e controle circular · Alfa 0.5.2
+
+Segurar **C** enquanto se move dobra a velocidade, com passadas mais longas e rápidas sincronizadas ao deslocamento. Soltar C retorna à caminhada. No celular/tablet, dois círculos transparentes substituem as setas de movimento: oito direções relativas à câmera, velocidade proporcional à distância do centro e retorno automático ao soltar. Os botões de corrida, câmera, missão, ações físicas e F aceitam multitoque. O controle circular também permite dirigir a empilhadeira.
+
+Validação: testes focados de corrida, joystick, animação, colisões e interações; conferência WebGL no Edge com teclado e toque em computador, celular, tablet e paisagem emulados. Comandos: `node --test tests/corrida.test.cjs tests/joystick.test.cjs` e `python tests/joystick-runtime.py`.

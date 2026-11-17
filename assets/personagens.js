@@ -607,7 +607,7 @@
   const restThighAngle = Math.atan2(.017,hipHeight-kneeHeight);
   const restShinAngle = Math.atan2(-.020,kneeHeight-ankleHeight);
 
-  function pose(x,z,time=0,walking=false,role='auditor',dir=0,mouth=false,walkDistance,blinkClock=time,seatBlend=0,tabletBlend=0,workerLook=0,driving=null){
+  function pose(x,z,time=0,walking=false,role='auditor',dir=0,mouth=false,walkDistance,blinkClock=time,seatBlend=0,tabletBlend=0,workerLook=0,driving=null,gait=null){
     const roleOffset=role==='manager'?1.3:role==='worker'?2.7:0,t=time+roleOffset;
     // The cushion top is .935 scene units. A .375 drop puts the lowest
     // posterior trouser vertices on that surface, rather than inside the seat.
@@ -616,13 +616,14 @@
     const reading=role==='auditor'?clamp(tabletBlend):0;
     const working=role==='worker'?seated:0;
     const w=walking&&!seated&&!reading?1:0, breath=sin(t*1.65), answer=mouth?1:0;
-    const cycle=(walkDistance ?? time*3.6)/strideDistance;
+    const locomotion=role==='auditor'&&w?gait:null,run=clamp(locomotion?.runBlend||0),stride=locomotion?.stride||strideDistance;
+    const cycle=locomotion?.cycle??(walkDistance ?? time*3.6)/strideDistance;
     const phase=cycle*TAU;
     const rootHeight=drive?.rootY??seatRise-seatDrop;
     const root=transform(x,rootHeight,z,0,dir),rig={};
     rig.body=joint(multiply(root,transform(0,.003*breath,0)),[0,1.66,0],0,-sin(phase)*.055*w,cos(phase)*.013*w);
-    const bodyTilt=drive?.feet?drive.lean:.10*sin(Math.PI*seated)-.36*working;
-    if(seated||drive?.feet)rig.body=joint(rig.body,[0,hipHeight,.007],bodyTilt);
+    const bodyTilt=drive?.feet?drive.lean:.10*sin(Math.PI*seated)-.36*working-.08*run;
+    if(seated||drive?.feet||run)rig.body=joint(rig.body,[0,hipHeight,.007],bodyTilt);
     const look=role==='worker'?clamp(workerLook)*seated:0;
     rig.head=joint(rig.body,[0,2.58,0],lerp(lerp(lerp(-.013*breath+.018*sin(t*5)*answer,-.56,working),-.42522,reading),.62,look),lerp(lerp(lerp(.029*sin(t*.66)+.033*sin(t*2.5)*answer,-.08,working),.86646,reading),0,look),.006*sin(t*.94)*(1-reading)*(1-working));
     const vis=answer*(.4+.33*sin(t*19)+.20*sin(t*29+1)+.07*sin(t*42)),op=Math.max(0,vis);
@@ -643,7 +644,7 @@
       const side=s<0?'L':'R',swing=-s*cos(phase);
       if (walking||seated) {
         const progress=(cycle+(s<0?0:.5))%1;
-        const halfStep=strideDistance*stanceFraction*.5;
+        const halfStep=stride*stanceFraction*.5;
         let footZ, lift=0, footRoll;
         if(seated){
           // Two-bone IK lowers the pelvis into the cushion while the soles stay
@@ -652,7 +653,7 @@
           footZ=-.45*seated;footRoll=0;
         } else if (progress < stanceFraction) {
           // A planted foot moves rearward relative to the body at the exact travel speed.
-          footZ=-halfStep+strideDistance*progress;
+          footZ=-halfStep+stride*progress;
           const heel=1-clamp(progress/.12);
           const toe=clamp((progress-(stanceFraction-.13))/.13);
           footRoll=.22*heel-.32*toe*toe*(3-2*toe);
@@ -660,11 +661,12 @@
           // Advance the lifted foot, matching the stance velocity at both ends.
           const swingProgress=(progress-stanceFraction)/(1-stanceFraction);
           const v=swingProgress, smooth=v*v*(3-2*v);
-          const tangent=strideDistance*(1-stanceFraction);
+          const tangent=stride*(1-stanceFraction);
           footZ=halfStep-2*halfStep*smooth+tangent*(2*v*v*v-3*v*v+v);
-          lift=.18*sin(Math.PI*v);
+          lift=(.18+.14*run)*sin(Math.PI*v);
           footRoll=lerp(-.32,.22,v)+.12*sin(Math.PI*v);
         }
+        if(locomotion)footZ=locomotion.feet[s<0?0:1].footZ;
         const footBottom=Math.min(...[
           [.012,-.277],[.012,.143],[.020,-.293],
           [.020,.151],[.045,-.294],[.045,.152]
@@ -703,8 +705,8 @@
       const carry=role==='auditor'&&s===1;
       // Keep the folio outside the chair's armrest. The free forearm folds
       // naturally over the lap; hand, fingers and tablet share the same rig.
-      let armAngle=-.017-w*swing*(carry?.19:.39)+.07*gesture+.04*seated;
-      let foreAngle=(carry?.30:.08)+(carry?.05:.78)*seated+w*(.12+.10*Math.max(0,-swing))+.35*gesture+s*.018*breath;
+      let armAngle=-.017-w*swing*(carry?.19+.07*run:.39+.20*run)+.07*gesture+.04*seated;
+      let foreAngle=(carry?.30:.08)+(carry?.05:.78)*seated+w*(.12+.10*Math.max(0,-swing))+.35*gesture+s*.018*breath+run*(carry?.12:.60);
       const tableHand=!drive&&seated>0&&((role==='auditor'&&s<0)||role==='worker');
       if(tableHand){
         // Shoulder and elbow carry the wrist towards the table before the hand
